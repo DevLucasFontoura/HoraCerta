@@ -246,6 +246,40 @@ export const useTimeRecords = () => {
       : `-${hours}h ${minutes}min`;
   };
 
+  const calculateGraphData = (expectedDailyHours: string) => {
+    // Dados da semana
+    const weekData = records.map(record => ({
+      date: record.date,
+      hours: record.total ? parseFloat(record.total.split('h')[0]) : 0,
+      balance: record.total ? calculateDailyBalance(record, expectedDailyHours) : '0h 0min'
+    }));
+
+    // Distribuição de tempo
+    const timeDistribution = records.reduce((acc, record) => {
+      if (!record.total) return acc;
+      
+      const [hours] = record.total.split('h').map(Number);
+      const balance = calculateDailyBalance(record, expectedDailyHours);
+      const extraHours = balance.startsWith('+') ? parseFloat(balance.split('h')[0]) : 0;
+      
+      return {
+        worked: acc.worked + hours,
+        extra: acc.extra + extraHours,
+        breaks: acc.breaks + (record.lunchOut && record.lunchReturn ? 1 : 0)
+      };
+    }, { worked: 0, extra: 0, breaks: 0 });
+
+    return {
+      weekData,
+      timeDistribution: [
+        { name: 'Tempo Trabalhado', value: timeDistribution.worked },
+        { name: 'Horas Extras', value: timeDistribution.extra },
+        { name: 'Pausas', value: timeDistribution.breaks }
+      ],
+      monthlyData: [] // implementar depois
+    };
+  };
+
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -258,6 +292,7 @@ export const useTimeRecords = () => {
     deleteRecord,
     deleteAllRecords,
     calculateTotalHours,
-    calculateDashboardStats
+    calculateDashboardStats,
+    calculateGraphData
   };
 };

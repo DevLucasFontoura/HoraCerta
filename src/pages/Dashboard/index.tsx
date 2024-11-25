@@ -27,6 +27,7 @@ import PageTransition from '../../components/PageTransition';
 import { APP_CONFIG } from '../../constants/app';
 import { WeekData, MonthlyData } from '../../types';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
+import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 
 // Dados iniciais vazios
 const weekData: WeekData[] = [];
@@ -48,21 +49,46 @@ const colorMap = {
   info: APP_CONFIG.COLORS.INFO
 } as const;
 
+interface GraphData {
+  weekData: Array<{
+    date: string;
+    hours: number;
+    balance: string;
+  }>;
+  timeDistribution: Array<{
+    name: string;
+    value: number;
+  }>;
+  monthlyData: Array<{
+    month: string;
+    total: number;
+    average: number;
+  }>;
+}
+
 const Dashboard = () => {
-  const { calculateDashboardStats } = useTimeRecords();
+  const { calculateDashboardStats, calculateGraphData } = useTimeRecords();
+  const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
     weekTotal: '0h',
     hoursBalance: '0h'
   });
+  const [graphData, setGraphData] = useState<GraphData>({
+    weekData: [],
+    timeDistribution: [],
+    monthlyData: []
+  });
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const result = await calculateDashboardStats();
-      setStats(result);
+    const fetchData = async () => {
+      const statsResult = await calculateDashboardStats();
+      const graphResult = calculateGraphData(schedule.expectedDailyHours);
+      setStats(statsResult);
+      setGraphData(graphResult);
     };
-    fetchStats();
-  }, [calculateDashboardStats]);
+    fetchData();
+  }, [calculateDashboardStats, calculateGraphData, schedule.expectedDailyHours]);
 
   const dashboardStats = [
     {
@@ -111,110 +137,55 @@ const Dashboard = () => {
         </StatsGrid>
 
         <ChartsGrid>
-          <ChartSection>
+          <ChartCard>
             <ChartTitle>Horas Trabalhadas na Semana</ChartTitle>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={weekData}>
-                  <defs>
-                    <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={APP_CONFIG.COLORS.PRIMARY} stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor={APP_CONFIG.COLORS.PRIMARY} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="hours" 
-                    stroke={APP_CONFIG.COLORS.PRIMARY} 
-                    fillOpacity={1}
-                    fill="url(#colorHours)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </ChartSection>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={graphData.weekData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="hours" stroke={colorMap.primary} fill={colorMap.primary} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
-          <ChartSection>
-            <ChartTitle>Distribuição do Tempo</ChartTitle>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <defs>
-                    {Object.entries(colorMap).map(([key, color]) => (
-                      <linearGradient key={key} id={`color${key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor={color} stopOpacity={0.2}/>
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <Pie
-                    data={timeDistribution}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                  >
-                    {timeDistribution.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={`url(#color${Object.keys(colorMap)[index]})`}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </ChartSection>
+          <ChartCard>
+            <ChartTitle>Distribuição de Tempo</ChartTitle>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={graphData.timeDistribution}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                >
+                  {graphData.timeDistribution.map((entry, index) => (
+                    <Cell key={entry.name} fill={Object.values(colorMap)[index]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
-          <ChartSection style={{ gridColumn: '1 / 2' }}>
+          <ChartCard>
             <ChartTitle>Comparativo Mensal</ChartTitle>
-            <ChartContainer>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyComparison}>
-                  <defs>
-                    <linearGradient id="colorExpected" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={APP_CONFIG.COLORS.INFO} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={APP_CONFIG.COLORS.INFO} stopOpacity={0.2}/>
-                    </linearGradient>
-                    <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={APP_CONFIG.COLORS.PRIMARY} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={APP_CONFIG.COLORS.PRIMARY} stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="expected" name="Horas Previstas" fill="url(#colorExpected)" />
-                  <Bar dataKey="actual" name="Horas Realizadas" fill="url(#colorActual)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </ChartSection>
-
-          <ChartSection style={{ gridColumn: '2 / 3' }}>
-            <ChartTitle>Registros do Mês</ChartTitle>
-            <ChartContainer style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <HabitGrid>
-                {habitData.map((day, index) => (
-                  <HabitCell 
-                    key={index}
-                    registered={day.registered}
-                    title={`Dia ${day.day}: ${day.registered ? 'Registrado' : 'Não registrado'}`}
-                  />
-                ))}
-              </HabitGrid>
-            </ChartContainer>
-          </ChartSection>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={graphData.monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="total" fill={colorMap.primary} name="Total" />
+                <Bar dataKey="average" fill={colorMap.info} name="Média" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
         </ChartsGrid>
       </Container>
     </PageTransition>
@@ -276,7 +247,7 @@ const StatTitle = styled.div`
   margin-top: 0.25rem;
 `;
 
-const ChartSection = styled.div`
+const ChartCard = styled.div`
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
@@ -288,11 +259,6 @@ const ChartTitle = styled.h2`
   font-weight: 600;
   color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
   margin-bottom: 1.5rem;
-`;
-
-const ChartContainer = styled.div`
-  width: 100%;
-  height: 300px;
 `;
 
 const ChartsGrid = styled.div`
