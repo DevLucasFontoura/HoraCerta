@@ -8,6 +8,7 @@ export const APP_CONFIG = {
   // Cores do tema
   COLORS: {
     PRIMARY: '#111111',
+    PRIMARY_DARK: '#000000',
     SECONDARY: '#666666',
     SUCCESS: '#10B981',
     WARNING: '#F59E0B',
@@ -15,6 +16,7 @@ export const APP_CONFIG = {
     INFO: '#3B82F6',
     BACKGROUND: '#FFFFFF',
     BORDER: '#EAEAEA',
+    GRAY: '#999999',
     TEXT: {
       PRIMARY: '#111111',
       SECONDARY: '#666666'

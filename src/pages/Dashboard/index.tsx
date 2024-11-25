@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import {
@@ -49,42 +49,37 @@ const colorMap = {
 } as const;
 
 const Dashboard = () => {
-  const { records } = useTimeRecords();
-  
-  const calculateStats = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayRecord = records.find(record => record.date === today);
-    
-    // Calcula total de hoje
-    const todayTotal = todayRecord?.total || '0h 0min';
-    
-    // Calcula total da semana
-    const weekTotal = '0h'; // Implementar cálculo real
-    
-    // Calcula banco de horas
-    const hoursBalance = '0h'; // Implementar cálculo real
-    
-    return { todayTotal, weekTotal, hoursBalance };
-  };
+  const { calculateDashboardStats } = useTimeRecords();
+  const [stats, setStats] = useState({
+    todayTotal: '0h',
+    weekTotal: '0h',
+    hoursBalance: '0h'
+  });
 
-  const { todayTotal, weekTotal, hoursBalance } = calculateStats();
+  useEffect(() => {
+    const fetchStats = async () => {
+      const result = await calculateDashboardStats();
+      setStats(result);
+    };
+    fetchStats();
+  }, [calculateDashboardStats]);
 
-  const stats = [
+  const dashboardStats = [
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.TODAY,
-      value: todayTotal,
+      value: stats.todayTotal,
       icon: <AiOutlineClockCircle size={24} />,
       color: APP_CONFIG.COLORS.PRIMARY
     },
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.WEEK,
-      value: weekTotal,
+      value: stats.weekTotal,
       icon: <AiOutlineBarChart size={24} />,
       color: APP_CONFIG.COLORS.INFO
     },
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.BALANCE,
-      value: hoursBalance,
+      value: stats.hoursBalance,
       icon: <AiOutlineCheckCircle size={24} />,
       color: APP_CONFIG.COLORS.SUCCESS
     }
@@ -99,7 +94,7 @@ const Dashboard = () => {
         </Header>
 
         <StatsGrid>
-          {stats.map((stat, index) => (
+          {dashboardStats.map((stat, index) => (
             <StatCard
               key={stat.title}
               initial={{ opacity: 0, y: 20 }}

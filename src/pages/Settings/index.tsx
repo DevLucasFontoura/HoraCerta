@@ -10,8 +10,47 @@ import {
 import { auth, db } from '../../config/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
+import { APP_CONFIG } from '../../constants/app';
+import { useWorkSchedule } from '../../hooks/useWorkSchedule';
+
+const SaveButton = styled.button`
+  background-color: ${APP_CONFIG.COLORS.PRIMARY};
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 20px;
+  width: 100%;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${APP_CONFIG.COLORS.PRIMARY_DARK};
+  }
+
+  &:disabled {
+    background-color: ${APP_CONFIG.COLORS.GRAY};
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: ${APP_CONFIG.COLORS.DANGER};
+  margin-top: 10px;
+`;
+
+const SuccessMessage = styled.div`
+  color: ${APP_CONFIG.COLORS.SUCCESS};
+  margin-top: 10px;
+`;
 
 const Settings = () => {
+  const { schedule, updateSchedule } = useWorkSchedule();
+  const [workSchedule, setWorkSchedule] = useState({
+    expectedDailyHours: '08:48',
+    breakTime: '01:00'
+  });
   const [profileData, setProfileData] = useState({
     name: '',
     email: ''
@@ -22,10 +61,6 @@ const Settings = () => {
   const [notifications, setNotifications] = useState({
     pointReminder: true,
     emailNotifications: false
-  });
-  const [workHours, setWorkHours] = useState({
-    dailyHours: '08:00',
-    lunchTime: '01:00'
   });
 
   useEffect(() => {
@@ -63,6 +98,24 @@ const Settings = () => {
     } catch (err: any) {
       console.error('Erro ao atualizar perfil:', err);
       setError('Erro ao atualizar perfil. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveWorkSchedule = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      await updateSchedule({
+        ...schedule,
+        expectedDailyHours: workSchedule.expectedDailyHours,
+        breakTime: workSchedule.breakTime
+      });
+      setSuccess('Configurações salvas com sucesso!');
+    } catch (err) {
+      console.error('Erro ao salvar configurações:', err);
+      setError('Erro ao salvar configurações. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -123,8 +176,8 @@ const Settings = () => {
           <Label>Carga horária diária</Label>
           <Input 
             type="time" 
-            value={workHours.dailyHours}
-            onChange={(e) => setWorkHours({ ...workHours, dailyHours: e.target.value })}
+            value={workSchedule.expectedDailyHours}
+            onChange={(e) => setWorkSchedule({ ...workSchedule, expectedDailyHours: e.target.value })}
           />
         </FormGroup>
 
@@ -132,10 +185,20 @@ const Settings = () => {
           <Label>Intervalo padrão</Label>
           <Input 
             type="time"
-            value={workHours.lunchTime}
-            onChange={(e) => setWorkHours({ ...workHours, lunchTime: e.target.value })}
+            value={workSchedule.breakTime}
+            onChange={(e) => setWorkSchedule({ ...workSchedule, breakTime: e.target.value })}
           />
         </FormGroup>
+
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessMessage>{success}</SuccessMessage>}
+
+        <SaveButton
+          onClick={handleSaveWorkSchedule}
+          disabled={loading}
+        >
+          {loading ? 'Salvando...' : 'Salvar Configurações'}
+        </SaveButton>
       </Section>
 
       <Section>
@@ -384,24 +447,6 @@ const DangerDescription = styled.p`
   font-size: 0.9rem;
   color: #666666;
   margin-bottom: 1rem;
-`;
-
-const ErrorMessage = styled.div`
-  color: #DC2626;
-  background: #FEE2E2;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-`;
-
-const SuccessMessage = styled.div`
-  color: #059669;
-  background: #D1FAE5;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
 `;
 
 export default Settings;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { 
@@ -12,6 +12,7 @@ import {
   AiOutlineDownload
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
+import { useTimeRecords } from '../../hooks/useTimeRecords';
 
 interface TimeRecord {
   id: number;
@@ -56,6 +57,21 @@ const tableVariants = {
 };
 
 const Home = () => {
+  const { calculateDashboardStats } = useTimeRecords();
+  const [stats, setStats] = useState({
+    todayTotal: '0h',
+    weekTotal: '0h',
+    hoursBalance: '0h'
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const result = await calculateDashboardStats();
+      setStats(result);
+    };
+    fetchStats();
+  }, [calculateDashboardStats]);
+
   const [dateFilter, setDateFilter] = useState('');
   const [records, setRecords] = useState<TimeRecord[]>([]);
 
@@ -64,21 +80,21 @@ const Home = () => {
       id: 'today',
       icon: <AiOutlineClockCircle size={24} />,
       title: 'Hoje',
-      value: '0h 0min',
+      value: stats.todayTotal,
       footer: 'Meta diária: 8h'
     },
     {
       id: 'week',
       icon: <AiOutlineCalendar size={24} />,
       title: 'Esta Semana',
-      value: '0h',
+      value: stats.weekTotal,
       footer: 'Meta semanal: 40h'
     },
     {
       id: 'balance',
       icon: <AiOutlineCheck size={24} />,
       title: 'Banco de Horas',
-      value: '0h',
+      value: stats.hoursBalance,
       footer: 'Atualizado hoje às ' + new Date().toLocaleTimeString('pt-BR')
     }
   ];
