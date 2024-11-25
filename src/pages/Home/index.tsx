@@ -8,7 +8,8 @@ import {
   AiOutlineEdit,
   AiOutlineDelete,
   AiOutlineSave,
-  AiOutlineClose
+  AiOutlineClose,
+  AiOutlineDownload
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
 
@@ -20,6 +21,7 @@ interface TimeRecord {
   lunchReturn: string;
   exit: string;
   total: string;
+  balance: string;
 }
 
 interface DashboardCard {
@@ -54,8 +56,8 @@ const tableVariants = {
 };
 
 const Home = () => {
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [records, setRecords] = useState<TimeRecord[]>([
+  const [dateFilter, setDateFilter] = useState('');
+  const [records] = useState<TimeRecord[]>([
     {
       id: 1,
       date: '15/03/2024',
@@ -63,10 +65,10 @@ const Home = () => {
       lunchOut: '12:00:45',
       lunchReturn: '13:01:12',
       exit: '17:00:34',
-      total: '8h'
+      total: '08:00:00',
+      balance: '+00:00:34'
     }
   ]);
-  const [editForm, setEditForm] = useState<TimeRecord | null>(null);
 
   const homeCards: DashboardCard[] = [
     {
@@ -92,36 +94,8 @@ const Home = () => {
     }
   ];
 
-  const handleEdit = (record: TimeRecord) => {
-    setEditingId(record.id);
-    setEditForm(record);
-  };
-
-  const handleSave = () => {
-    if (editForm) {
-      setRecords(records.map(record => 
-        record.id === editForm.id ? editForm : record
-      ));
-      setEditingId(null);
-      setEditForm(null);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditForm(null);
-  };
-
-  const handleDelete = (id: number) => {
-    if (window.confirm('Tem certeza que deseja excluir este registro?')) {
-      setRecords(records.filter(record => record.id !== id));
-    }
-  };
-
-  const handleInputChange = (field: keyof TimeRecord, value: string) => {
-    if (editForm) {
-      setEditForm({ ...editForm, [field]: value });
-    }
+  const handleExport = () => {
+    console.log('Exportando relatório...');
   };
 
   return (
@@ -160,12 +134,28 @@ const Home = () => {
           ))}
         </Grid>
 
-        <StyledSection
-          variants={tableVariants}
-          initial="hidden"
-          animate="visible"
+        <Section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
-          <SectionTitle>Registros Recentes</SectionTitle>
+          <SectionHeader>
+            <div>
+              <SectionTitle>Histórico Detalhado</SectionTitle>
+              <FilterContainer>
+                <FilterInput
+                  type="month"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </FilterContainer>
+            </div>
+            <ExportButton onClick={handleExport}>
+              <AiOutlineDownload size={20} />
+              Exportar Relatório
+            </ExportButton>
+          </SectionHeader>
+
           <TableContainer>
             <Table>
               <thead>
@@ -176,93 +166,27 @@ const Home = () => {
                   <th>Retorno Almoço</th>
                   <th>Saída</th>
                   <th>Total</th>
-                  <th>Ações</th>
+                  <th>Saldo</th>
                 </tr>
               </thead>
               <tbody>
-                {records.map(record => (
-                  <tr key={record.id}>
-                    {editingId === record.id ? (
-                      <>
-                        <td>
-                          <Input
-                            type="date"
-                            value={editForm?.date || ''}
-                            onChange={(e) => handleInputChange('date', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="time"
-                            value={editForm?.entry || ''}
-                            onChange={(e) => handleInputChange('entry', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="time"
-                            value={editForm?.lunchOut || ''}
-                            onChange={(e) => handleInputChange('lunchOut', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="time"
-                            value={editForm?.lunchReturn || ''}
-                            onChange={(e) => handleInputChange('lunchReturn', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <Input
-                            type="time"
-                            value={editForm?.exit || ''}
-                            onChange={(e) => handleInputChange('exit', e.target.value)}
-                          />
-                        </td>
-                        <td>{editForm?.total}</td>
-                        <td>
-                          <ActionButtons>
-                            <ActionButton onClick={handleSave} color="#10B981">
-                              <AiOutlineSave />
-                            </ActionButton>
-                            <ActionButton onClick={handleCancel} color="#666666">
-                              <AiOutlineClose />
-                            </ActionButton>
-                          </ActionButtons>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td>{record.date}</td>
-                        <td>{record.entry}</td>
-                        <td>{record.lunchOut}</td>
-                        <td>{record.lunchReturn}</td>
-                        <td>{record.exit}</td>
-                        <td>{record.total}</td>
-                        <td>
-                          <ActionButtons>
-                            <ActionButton 
-                              onClick={() => handleEdit(record)}
-                              color="#3B82F6"
-                            >
-                              <AiOutlineEdit />
-                            </ActionButton>
-                            <ActionButton 
-                              onClick={() => handleDelete(record.id)}
-                              color="#EF4444"
-                            >
-                              <AiOutlineDelete />
-                            </ActionButton>
-                          </ActionButtons>
-                        </td>
-                      </>
-                    )}
+                {records.map((record, index) => (
+                  <tr key={index}>
+                    <td>{record.date}</td>
+                    <td>{record.entry}</td>
+                    <td>{record.lunchOut}</td>
+                    <td>{record.lunchReturn}</td>
+                    <td>{record.exit}</td>
+                    <td>{record.total}</td>
+                    <td className={record.balance.includes('+') ? 'positive' : 'negative'}>
+                      {record.balance}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
           </TableContainer>
-        </StyledSection>
+        </Section>
       </Container>
     </PageTransition>
   );
@@ -332,11 +256,18 @@ const CardFooter = styled.div`
   color: #666666;
 `;
 
-const StyledSection = styled(motion.section)`
+const Section = styled(motion.section)`
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 `;
 
 const SectionTitle = styled.h2`
@@ -344,6 +275,42 @@ const SectionTitle = styled.h2`
   font-weight: 600;
   color: #111111;
   margin-bottom: 1.5rem;
+`;
+
+const FilterContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const FilterInput = styled.input`
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: #111111;
+  }
+`;
+
+const ExportButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: #10B981;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #158057;
+  }
 `;
 
 const TableContainer = styled.div`
@@ -377,40 +344,13 @@ const Table = styled.table`
   tbody tr:hover {
     background-color: #f9f9f9;
   }
-`;
 
-const Input = styled.input`
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #eaeaea;
-  border-radius: 4px;
-  font-size: 0.9rem;
-
-  &:focus {
-    outline: none;
-    border-color: #111111;
+  .positive {
+    color: #10B981;
   }
-`;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const ActionButton = styled.button<{ color: string }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 4px;
-  background: ${props => `${props.color}15`};
-  color: ${props => props.color};
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${props => `${props.color}25`};
+  .negative {
+    color: #EF4444;
   }
 `;
 
