@@ -86,10 +86,26 @@ export const useTimeRecords = () => {
     if (!id) throw new Error('ID do registro não fornecido');
     
     const recordRef = doc(db, 'timeRecords', id);
-    await updateDoc(recordRef, {
+    
+    // Calcula o total se tivermos todos os horários necessários
+    const updatedData = {
       ...data,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (data.entry && data.exit) {
+      const recordData = {
+        ...data,
+        id,
+        userId: auth.currentUser!.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } as TimeRecord;
+      
+      updatedData.total = calculateTotalHours(recordData);
+    }
+
+    await updateDoc(recordRef, updatedData);
     await fetchRecords();
   };
 
@@ -134,16 +150,20 @@ export const useTimeRecords = () => {
       return hours * 3600 + minutes * 60 + (seconds || 0);
     };
 
+    // Primeiro período (entrada até saída almoço)
     const entrySeconds = parseTime(record.entry);
+    const lunchOutSeconds = record.lunchOut ? parseTime(record.lunchOut) : entrySeconds;
+    const firstPeriod = lunchOutSeconds - entrySeconds;
+
+    // Segundo período (retorno almoço até saída)
+    const lunchReturnSeconds = record.lunchReturn ? parseTime(record.lunchReturn) : lunchOutSeconds;
     const exitSeconds = parseTime(record.exit);
-    let totalSeconds = exitSeconds - entrySeconds;
+    const secondPeriod = exitSeconds - lunchReturnSeconds;
 
-    if (record.lunchOut && record.lunchReturn) {
-      const lunchOutSeconds = parseTime(record.lunchOut);
-      const lunchReturnSeconds = parseTime(record.lunchReturn);
-      totalSeconds -= (lunchReturnSeconds - lunchOutSeconds);
-    }
+    // Total em segundos
+    const totalSeconds = firstPeriod + secondPeriod;
 
+    // Converter para horas e minutos
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     
@@ -193,6 +213,7 @@ export const useTimeRecords = () => {
       return total + (parseInt(hours) * 60) + (parseInt(minutes) || 0);
     }, 0);
     
+    // Calcula a diferença (mesmo princípio da fórmula: G12-$C$5)
     const balanceMinutes = totalMinutesWorked - expectedMinutes;
     const hoursBalance = `${Math.floor(Math.abs(balanceMinutes)/60)}h ${Math.abs(balanceMinutes)%60}min`;
     
@@ -202,6 +223,27 @@ export const useTimeRecords = () => {
       hoursBalance: balanceMinutes >= 0 ? `+${hoursBalance}` : `-${hoursBalance}`,
       workDays
     };
+  };
+
+  const calculateDailyBalance = (record: TimeRecord, expectedDailyHours: string) => {
+    if (!record.total) return '0h 0min';
+    
+    // Converte o total trabalhado para minutos
+    const [workedHours, workedMinutes] = record.total.split('h ');
+    const totalWorkedMinutes = (parseInt(workedHours) * 60) + (parseInt(workedMinutes) || 0);
+    
+    // Converte as horas esperadas para minutos
+    const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
+    const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
+    
+    // Calcula a diferença
+    const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const minutes = Math.abs(diffMinutes) % 60;
+    
+    return diffMinutes >= 0 
+      ? `+${hours}h ${minutes}min`
+      : `-${hours}h ${minutes}min`;
   };
 
   useEffect(() => {
@@ -215,8 +257,7 @@ export const useTimeRecords = () => {
     updateRecord,
     deleteRecord,
     deleteAllRecords,
-    calculateDashboardStats,
     calculateTotalHours,
-    fetchRecords
+    calculateDashboardStats
   };
 };

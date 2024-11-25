@@ -17,6 +17,8 @@ import { useTimeRecords } from '../../hooks/useTimeRecords';
 import LoadingSpinner from '../../components/LoadingSpinner/index';
 import { TimeRecord } from '../../types';
 import { APP_CONFIG } from '../../constants/app';
+import { auth } from '../../config/firebase';
+import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 
 const statsVariants = {
   hidden: { opacity: 0 },
@@ -51,7 +53,8 @@ const tableVariants = {
 };
 
 const Analytics = () => {
-  const { records, loading, updateRecord, deleteRecord, deleteAllRecords } = useTimeRecords();
+  const { records, loading, updateRecord, deleteRecord, deleteAllRecords, calculateTotalHours } = useTimeRecords();
+  const { schedule } = useWorkSchedule();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Omit<TimeRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null>(null);
 
@@ -85,7 +88,19 @@ const Analytics = () => {
 
   const handleSave = async () => {
     if (editForm && editingId) {
-      await updateRecord(editingId, editForm);
+      // Calcula o total antes de salvar
+      const updatedForm = {
+        ...editForm,
+        total: calculateTotalHours({
+          ...editForm,
+          id: editingId,
+          userId: auth.currentUser!.uid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        } as TimeRecord)
+      };
+      
+      await updateRecord(editingId, updatedForm);
       setEditingId(null);
       setEditForm(null);
     }
@@ -116,6 +131,27 @@ const Analytics = () => {
         console.error('Erro ao resetar registros:', error);
       }
     }
+  };
+
+  const calculateDailyBalance = (record: { total: string | undefined }, expectedDailyHours: string) => {
+    if (!record.total) return '0h 0min';
+    
+    // Converte o total trabalhado para minutos
+    const [workedHours, workedMinutes] = record.total.split('h ');
+    const totalWorkedMinutes = (parseInt(workedHours) * 60) + (parseInt(workedMinutes) || 0);
+    
+    // Converte as horas esperadas para minutos
+    const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
+    const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
+    
+    // Calcula a diferença
+    const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const minutes = Math.abs(diffMinutes) % 60;
+    
+    return diffMinutes >= 0 
+      ? `+${hours}h ${minutes}min`
+      : `-${hours}h ${minutes}min`;
   };
 
   if (loading) {
@@ -176,6 +212,7 @@ const Analytics = () => {
                   <th>Retorno</th>
                   <th>Saída</th>
                   <th>Total</th>
+                  <th>Saldo</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -191,6 +228,14 @@ const Analytics = () => {
                         <td><Input type="time" value={editForm?.lunchReturn} onChange={e => handleInputChange('lunchReturn', e.target.value)} /></td>
                         <td><Input type="time" value={editForm?.exit} onChange={e => handleInputChange('exit', e.target.value)} /></td>
                         <td>{editForm?.total}</td>
+                        <td style={{ 
+                          color: editForm?.total ? calculateDailyBalance(editForm, schedule.expectedDailyHours).startsWith('+') 
+                            ? 'green' 
+                            : 'red' 
+                          : 'inherit'
+                        }}>
+                          {editForm?.total ? calculateDailyBalance(editForm, schedule.expectedDailyHours) : '-'}
+                        </td>
                         <td>
                           <ActionButtons>
                             <ActionButton color="#10B981" onClick={handleSave}><AiOutlineSave /></ActionButton>
@@ -207,6 +252,14 @@ const Analytics = () => {
                         <td>{record.lunchReturn}</td>
                         <td>{record.exit}</td>
                         <td>{record.total}</td>
+                        <td style={{ 
+                          color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                            ? 'green' 
+                            : 'red' 
+                          : 'inherit'
+                        }}>
+                          {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                        </td>
                         <td>
                           <ActionButtons>
                             <ActionButton color="#111111" onClick={() => handleEdit(record)}><AiOutlineEdit /></ActionButton>

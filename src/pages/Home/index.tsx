@@ -13,6 +13,7 @@ import {
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
+import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 
 interface TimeRecord {
   id: number;
@@ -57,7 +58,8 @@ const tableVariants = {
 };
 
 const Home = () => {
-  const { calculateDashboardStats } = useTimeRecords();
+  const { records, calculateDashboardStats } = useTimeRecords();
+  const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
     weekTotal: '0h',
@@ -73,7 +75,6 @@ const Home = () => {
   }, [calculateDashboardStats]);
 
   const [dateFilter, setDateFilter] = useState('');
-  const [records, setRecords] = useState<TimeRecord[]>([]);
 
   const homeCards: DashboardCard[] = [
     {
@@ -101,6 +102,24 @@ const Home = () => {
 
   const handleExport = () => {
     console.log('Exportando relatório...');
+  };
+
+  const calculateDailyBalance = (record: { total: string | undefined }, expectedDailyHours: string) => {
+    if (!record.total) return '0h 0min';
+    
+    const [workedHours, workedMinutes] = record.total.split('h ');
+    const totalWorkedMinutes = (parseInt(workedHours) * 60) + (parseInt(workedMinutes) || 0);
+    
+    const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
+    const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
+    
+    const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
+    const hours = Math.floor(Math.abs(diffMinutes) / 60);
+    const minutes = Math.abs(diffMinutes) % 60;
+    
+    return diffMinutes >= 0 
+      ? `+${hours}h ${minutes}min`
+      : `-${hours}h ${minutes}min`;
   };
 
   return (
@@ -175,16 +194,21 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody>
-                {records.map((record, index) => (
-                  <tr key={index}>
+                {records.map((record) => (
+                  <tr key={record.id}>
                     <td>{record.date}</td>
                     <td>{record.entry}</td>
                     <td>{record.lunchOut}</td>
                     <td>{record.lunchReturn}</td>
                     <td>{record.exit}</td>
                     <td>{record.total}</td>
-                    <td className={record.balance.includes('+') ? 'positive' : 'negative'}>
-                      {record.balance}
+                    <td style={{ 
+                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                        ? 'green' 
+                        : 'red' 
+                      : 'inherit'
+                    }}>
+                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
                     </td>
                   </tr>
                 ))}
