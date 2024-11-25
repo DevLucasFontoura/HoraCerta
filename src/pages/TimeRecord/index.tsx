@@ -10,6 +10,7 @@ import {
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
 import { APP_CONFIG } from '../../constants/app';
+import { useTimeRecords } from '../../hooks/useTimeRecords';
 
 interface TimeState {
   hours: string;
@@ -76,174 +77,138 @@ const timelineItemVariants = {
 };
 
 const TimeRecord = () => {
-  const [time, setTime] = useState<TimeState>({
+  const { records, registerTime } = useTimeRecords();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [currentTime, setCurrentTime] = useState<TimeState>({
     hours: '00',
     minutes: '00',
     seconds: '00'
   });
-  const [showOptions, setShowOptions] = useState(false);
-  const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [allRecordsComplete, setAllRecordsComplete] = useState(false);
 
-  const recordTypes = [
-    { 
-      id: 'entry',
-      label: 'Entrada Principal',
-      icon: <AiOutlineLogin size={20} />,
-      color: '#10B981'
-    },
-    { 
-      id: 'lunch_out',
-      label: 'Saída Almoço',
-      icon: <AiOutlineCoffee size={20} />,
-      color: '#F59E0B'
-    },
-    { 
-      id: 'lunch_return',
-      label: 'Retorno Almoço',
-      icon: <AiOutlineCoffee size={20} />,
-      color: '#F59E0B'
-    },
-    { 
-      id: 'exit',
-      label: 'Saída Principal',
-      icon: <AiOutlineLogout size={20} />,
-      color: '#EF4444'
-    }
-  ];
+  const today = new Date().toISOString().split('T')[0];
+  const todayRecord = records.find(record => record.date === today);
 
-  const getAvailableOptions = () => {
-    const registeredTypes = records.map(record => record.type);
-
-    if (registeredTypes.length === 0) {
-      return recordTypes.filter(type => type.id === 'entry');
-    }
-
-    if (registeredTypes.includes('entry') && !registeredTypes.includes('lunch_out')) {
-      return recordTypes.filter(type => type.id === 'lunch_out');
-    }
-
-    if (registeredTypes.includes('lunch_out') && !registeredTypes.includes('lunch_return')) {
-      return recordTypes.filter(type => type.id === 'lunch_return');
-    }
-
-    if (registeredTypes.includes('lunch_return') && !registeredTypes.includes('exit')) {
-      return recordTypes.filter(type => type.id === 'exit');
-    }
-
-    if (registeredTypes.length === 4) {
-      setAllRecordsComplete(true);
-      return [];
-    }
-
-    return [];
-  };
+  const timelineItems = todayRecord ? [
+    { time: todayRecord.entry, label: 'Entrada', type: 'entry' },
+    { time: todayRecord.lunchOut, label: 'Saída Almoço', type: 'lunchOut' },
+    { time: todayRecord.lunchReturn, label: 'Retorno Almoço', type: 'lunchReturn' },
+    { time: todayRecord.exit, label: 'Saída', type: 'exit' }
+  ].filter(item => item.time) : [];
 
   useEffect(() => {
-    const updateTime = () => {
+    const timer = setInterval(() => {
       const now = new Date();
-      setTime({
+      setCurrentTime({
         hours: String(now.getHours()).padStart(2, '0'),
         minutes: String(now.getMinutes()).padStart(2, '0'),
         seconds: String(now.getSeconds()).padStart(2, '0')
       });
-    };
-
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
+    }, 1000);
 
     return () => clearInterval(timer);
   }, []);
 
-  const getCurrentTimeString = () => {
-    return `${time.hours}:${time.minutes}:${time.seconds}`;
-  };
-
-  const handleRecordTime = (type: string, label: string) => {
-    const currentTime = getCurrentTimeString();
-    const newRecord = {
-      time: currentTime,
-      type,
-      label
-    };
-    setRecords([newRecord, ...records]);
-    setShowOptions(false);
+  const handleRegister = async (type: 'entry' | 'lunchOut' | 'lunchReturn' | 'exit') => {
+    try {
+      setLoading(true);
+      setError('');
+      await registerTime(type);
+      setSuccess('Ponto registrado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao registrar ponto:', err);
+      setError('Erro ao registrar ponto. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <PageTransition>
       <Container>
-        <TimeDisplayCard>
-          <TimeValue>{`${time.hours}:${time.minutes}:${time.seconds}`}</TimeValue>
+        <Header>
+          <Title>Registrar Ponto</Title>
+          <Subtitle>Registre seus horários de trabalho</Subtitle>
+        </Header>
+
+        <TimeDisplayCard
+          initial="hidden"
+          animate="visible"
+          variants={timeDisplayVariants}
+        >
+          <TimeValue>
+            {currentTime.hours}:{currentTime.minutes}:{currentTime.seconds}
+          </TimeValue>
           <TimeDate>
             {new Date().toLocaleDateString('pt-BR', { 
               weekday: 'long', 
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
             })}
           </TimeDate>
         </TimeDisplayCard>
 
-        <ActionCard>
-          {allRecordsComplete ? (
-            <CompletedMessage>
-              <AiOutlineClockCircle size={24} />
-              {APP_CONFIG.MESSAGES.TIME_RECORD.ALL_RECORDS_COMPLETE}
-            </CompletedMessage>
-          ) : !showOptions ? (
-            <RecordButton onClick={() => setShowOptions(true)}>
-              <AiOutlineClockCircle size={24} />
-              {APP_CONFIG.MESSAGES.TIME_RECORD.RECORD_BUTTON}
-            </RecordButton>
-          ) : (
-            <OptionsContainer>
-              <OptionsTitle>{APP_CONFIG.MESSAGES.TIME_RECORD.NEXT_RECORD}</OptionsTitle>
-              <OptionsGrid>
-                {getAvailableOptions().map((type) => (
-                  <OptionButton
-                    key={type.id}
-                    onClick={() => handleRecordTime(type.id, type.label)}
-                    color={type.color}
-                  >
-                    {type.icon}
-                    {type.label}
-                  </OptionButton>
-                ))}
-              </OptionsGrid>
-              <CancelButton onClick={() => setShowOptions(false)}>
-                Cancelar
-              </CancelButton>
-            </OptionsContainer>
-          )}
-        </ActionCard>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessMessage>{success}</SuccessMessage>}
 
-        <RecordsSection>
-          <SectionHeader>
-            <SectionTitle>
-              <AiOutlineHistory size={20} />
-              {APP_CONFIG.MESSAGES.TIME_RECORD.TODAY_RECORDS}
-            </SectionTitle>
-          </SectionHeader>
+        <ButtonGrid>
+          <TimeButton 
+            onClick={() => handleRegister('entry')} 
+            disabled={loading || !!todayRecord?.entry}
+            $registered={!!todayRecord?.entry}
+          >
+            <ButtonIcon><AiOutlineLogin /></ButtonIcon>
+            <ButtonLabel>Entrada</ButtonLabel>
+          </TimeButton>
+
+          <TimeButton 
+            onClick={() => handleRegister('lunchOut')} 
+            disabled={loading || !todayRecord?.entry || !!todayRecord?.lunchOut}
+            $registered={!!todayRecord?.lunchOut}
+          >
+            <ButtonIcon><AiOutlineCoffee /></ButtonIcon>
+            <ButtonLabel>Saída Almoço</ButtonLabel>
+          </TimeButton>
+
+          <TimeButton 
+            onClick={() => handleRegister('lunchReturn')} 
+            disabled={loading || !todayRecord?.lunchOut || !!todayRecord?.lunchReturn}
+            $registered={!!todayRecord?.lunchReturn}
+          >
+            <ButtonIcon><AiOutlineLogin /></ButtonIcon>
+            <ButtonLabel>Retorno Almoço</ButtonLabel>
+          </TimeButton>
+
+          <TimeButton 
+            onClick={() => handleRegister('exit')} 
+            disabled={loading || !todayRecord?.lunchReturn || !!todayRecord?.exit}
+            $registered={!!todayRecord?.exit}
+          >
+            <ButtonIcon><AiOutlineLogout /></ButtonIcon>
+            <ButtonLabel>Saída</ButtonLabel>
+          </TimeButton>
+        </ButtonGrid>
+
+        <HistorySection
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <HistoryTitle>Histórico de Hoje</HistoryTitle>
           <TimelineContainer>
-            <TimelineWrapper
-              variants={timelineVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {records.map((record, index) => (
-                <TimelineItemWrapper
-                  key={index}
-                  variants={timelineItemVariants}
-                >
-                  <TimelineTime>{record.time}</TimelineTime>
+            <TimelineWrapper>
+              {timelineItems.map((item, index) => (
+                <TimelineItem key={item.type}>
+                  <TimelineTime>{item.time}</TimelineTime>
                   <TimelineDot />
-                  <TimelineLabel>{record.label}</TimelineLabel>
-                </TimelineItemWrapper>
+                  <TimelineLabel>{item.label}</TimelineLabel>
+                </TimelineItem>
               ))}
             </TimelineWrapper>
           </TimelineContainer>
-        </RecordsSection>
+        </HistorySection>
       </Container>
     </PageTransition>
   );
@@ -255,7 +220,7 @@ const Container = styled.div`
   padding: 2rem 1rem;
 `;
 
-const TimeDisplayCard = styled.div`
+const TimeDisplayCard = styled(motion.div)`
   background: white;
   padding: 2rem;
   border-radius: 12px;
@@ -319,35 +284,35 @@ const TimelineWrapper = styled(motion.div)`
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #eaeaea;
+    background: ${APP_CONFIG.COLORS.BORDER};
   }
 `;
 
-const TimelineItemWrapper = styled(motion.div)`
+const TimelineItem = styled(motion.div)`
   display: flex;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   position: relative;
 `;
 
 const TimelineTime = styled.div`
   width: 100px;
   font-variant-numeric: tabular-nums;
-  color: #111111;
+  color: ${APP_CONFIG.COLORS.PRIMARY};
   font-weight: 500;
 `;
 
 const TimelineDot = styled.div`
   width: 12px;
   height: 12px;
-  background: #111111;
+  background: ${APP_CONFIG.COLORS.PRIMARY};
   border-radius: 50%;
   margin: 0 20px;
   z-index: 1;
 `;
 
 const TimelineLabel = styled.div`
-  color: #666666;
+  color: ${APP_CONFIG.COLORS.SECONDARY};
 `;
 
 const CompletedMessage = styled.div`
@@ -434,6 +399,96 @@ const CancelButton = styled.button`
   &:hover {
     color: #111111;
   }
+`;
+
+const Header = styled.div`
+  text-align: center;
+  margin-bottom: 2rem;
+`;
+
+const Title = styled.h1`
+  font-size: 2rem;
+  font-weight: 600;
+  color: #111111;
+`;
+
+const Subtitle = styled.p`
+  font-size: 1rem;
+  color: #666666;
+`;
+
+const ButtonGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+`;
+
+const TimeButton = styled.button<{ $registered?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid ${props => props.$registered ? APP_CONFIG.COLORS.DANGER : APP_CONFIG.COLORS.BORDER};
+  background: ${props => props.$registered ? `${APP_CONFIG.COLORS.DANGER}15` : 'white'};
+  border-radius: 8px;
+  cursor: ${props => props.$registered ? 'not-allowed' : 'pointer'};
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    border-color: ${props => props.$registered ? APP_CONFIG.COLORS.DANGER : APP_CONFIG.COLORS.PRIMARY};
+    background: ${props => props.$registered ? `${APP_CONFIG.COLORS.DANGER}15` : `${APP_CONFIG.COLORS.PRIMARY}15`};
+  }
+`;
+
+const ButtonIcon = styled.div`
+  font-size: 1.5rem;
+  color: ${APP_CONFIG.COLORS.PRIMARY};
+`;
+
+const ButtonLabel = styled.div`
+  font-size: 0.9rem;
+  color: ${APP_CONFIG.COLORS.SECONDARY};
+`;
+
+const ErrorMessage = styled.div`
+  background: #FFE4E6;
+  border: 1px solid #EF4444;
+  border-radius: 8px;
+  padding: 1rem;
+  color: #EF4444;
+  font-weight: 500;
+  margin-bottom: 1rem;
+`;
+
+const SuccessMessage = styled.div`
+  background: #F0FDF4;
+  border: 1px solid #10B981;
+  border-radius: 8px;
+  padding: 1rem;
+  color: #10B981;
+  font-weight: 500;
+  margin-bottom: 1rem;
+`;
+
+const HistorySection = styled(motion.div)`
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid ${APP_CONFIG.COLORS.BORDER};
+`;
+
+const HistoryTitle = styled.h2`
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: ${APP_CONFIG.COLORS.PRIMARY};
+  margin-bottom: 1rem;
 `;
 
 export default TimeRecord;

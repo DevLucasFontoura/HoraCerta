@@ -1,22 +1,37 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { AiOutlineClockCircle } from 'react-icons/ai';
-import { login } from '../../store/slices/authSlice';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 import { APP_CONFIG } from '../../constants/app';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const dispatch = useDispatch();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(login());
-    navigate('/home');
+    setError('');
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error('Erro no login:', err);
+      if (err.code === 'auth/invalid-credential') {
+        setError('Email ou senha incorretos');
+      } else {
+        setError('Ocorreu um erro ao fazer login. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +49,8 @@ const Login = () => {
         
         <Title>{APP_CONFIG.MESSAGES.LOGIN.TITLE}</Title>
         <Subtitle>{APP_CONFIG.MESSAGES.LOGIN.SUBTITLE}</Subtitle>
+
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
         <Form onSubmit={handleSubmit}>
           <FormGroup>
@@ -60,8 +77,8 @@ const Login = () => {
 
           <ForgotPassword href="#">{APP_CONFIG.MESSAGES.LOGIN.FORGOT_PASSWORD}</ForgotPassword>
 
-          <SubmitButton type="submit">
-            Entrar →
+          <SubmitButton type="submit" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar →'}
           </SubmitButton>
         </Form>
 
@@ -208,6 +225,16 @@ export const ForgotPassword = styled.a`
   &:hover {
     color: #111111;
   }
+`;
+
+export const ErrorMessage = styled.div`
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
 `;
 
 export default Login;

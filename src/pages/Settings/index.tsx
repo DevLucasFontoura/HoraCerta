@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { 
@@ -7,8 +7,18 @@ import {
   AiOutlineLock,
   AiOutlineClockCircle
 } from 'react-icons/ai';
+import { auth, db } from '../../config/firebase';
+import { updateProfile } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const Settings = () => {
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [notifications, setNotifications] = useState({
     pointReminder: true,
     emailNotifications: false
@@ -17,6 +27,46 @@ const Settings = () => {
     dailyHours: '08:00',
     lunchTime: '01:00'
   });
+
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      setProfileData({
+        name: currentUser.displayName || '',
+        email: currentUser.email || ''
+      });
+    }
+  }, []);
+
+  const handleProfileUpdate = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não encontrado');
+
+      // Atualiza o displayName no Auth
+      await updateProfile(currentUser, {
+        displayName: profileData.name
+      });
+
+      // Atualiza os dados no Firestore
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        name: profileData.name,
+        email: profileData.email
+      });
+
+      setSuccess('Perfil atualizado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao atualizar perfil:', err);
+      setError('Erro ao atualizar perfil. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Container>
@@ -31,17 +81,36 @@ const Settings = () => {
           <SectionTitle>Perfil</SectionTitle>
         </SectionHeader>
         
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessMessage>{success}</SuccessMessage>}
+
         <FormGroup>
           <Label>Nome completo</Label>
-          <Input type="text" placeholder="Seu nome" />
+          <Input 
+            type="text" 
+            value={profileData.name}
+            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+            placeholder="Seu nome" 
+          />
         </FormGroup>
 
         <FormGroup>
           <Label>E-mail</Label>
-          <Input type="email" placeholder="seu@email.com" />
+          <Input 
+            type="email" 
+            value={profileData.email}
+            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+            placeholder="seu@email.com"
+            disabled // Email não pode ser alterado diretamente pelo Firebase Auth
+          />
         </FormGroup>
 
-        <Button>Salvar alterações</Button>
+        <Button 
+          onClick={handleProfileUpdate}
+          disabled={loading}
+        >
+          {loading ? 'Salvando...' : 'Salvar alterações'}
+        </Button>
       </Section>
 
       <Section>
@@ -315,6 +384,24 @@ const DangerDescription = styled.p`
   font-size: 0.9rem;
   color: #666666;
   margin-bottom: 1rem;
+`;
+
+const ErrorMessage = styled.div`
+  color: #DC2626;
+  background: #FEE2E2;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+`;
+
+const SuccessMessage = styled.div`
+  color: #059669;
+  background: #D1FAE5;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
 `;
 
 export default Settings;

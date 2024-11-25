@@ -9,17 +9,26 @@ import {
   AiOutlineLogout
 } from 'react-icons/ai';
 import { APP_CONFIG } from '../../constants/app';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 
 interface NavItemProps {
-  active: boolean;
+  $active: boolean;
 }
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    navigate(APP_CONFIG.ROUTES.LOGIN);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('user');
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      alert('Erro ao fazer logout. Tente novamente.');
+    }
   };
 
   const navItems = [
@@ -62,7 +71,7 @@ const Sidebar = () => {
           <NavItem
             key={item.path}
             to={item.path}
-            active={location.pathname === item.path}
+            $active={location.pathname === item.path}
           >
             {item.icon}
             <NavLabel>{item.label}</NavLabel>
@@ -72,7 +81,7 @@ const Sidebar = () => {
 
       <LogoutButton onClick={handleLogout}>
         <AiOutlineLogout size={20} />
-        <LogoutText>Sair</LogoutText>
+        <span>Sair</span>
       </LogoutButton>
     </Container>
   );
@@ -81,9 +90,9 @@ const Sidebar = () => {
 const Container = styled.aside`
   width: 240px;
   height: 100vh;
-  background: white;
-  border-right: 1px solid ${APP_CONFIG.COLORS.BORDER};
-  padding: 1.5rem;
+  padding: 1.5rem 1rem;
+  background: #ffffff;
+  border-right: 1px solid #eaeaea;
   position: fixed;
   left: 0;
   top: 0;
@@ -114,16 +123,15 @@ const Nav = styled.nav`
 const NavItem = styled(Link)<NavItemProps>`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 8px;
-  color: ${props => props.active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.SECONDARY};
-  background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
+  gap: 12px;
+  padding: 12px 16px;
+  color: ${props => props.$active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.TEXT.PRIMARY};
   text-decoration: none;
-  transition: all 0.2s ease;
-
+  transition: all 0.2s;
+  background: ${props => props.$active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
+  
   &:hover {
-    background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}15` : `${APP_CONFIG.COLORS.PRIMARY}05`};
+    background: ${APP_CONFIG.COLORS.PRIMARY}10;
     color: ${APP_CONFIG.COLORS.PRIMARY};
   }
 `;
@@ -136,24 +144,26 @@ const NavLabel = styled.span`
 const LogoutButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  color: ${APP_CONFIG.COLORS.DANGER};
-  cursor: pointer;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
   margin-top: auto;
-  transition: all 0.2s ease;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  cursor: pointer;
+  transition: all 0.2s;
 
   &:hover {
-    background: ${`${APP_CONFIG.COLORS.DANGER}10`};
+    background: ${APP_CONFIG.COLORS.DANGER}15;
+    color: ${APP_CONFIG.COLORS.DANGER};
   }
-`;
 
-const LogoutText = styled.span`
-  font-size: 0.9rem;
-  font-weight: 500;
+  span {
+    font-size: 14px;
+    font-weight: 500;
+  }
 `;
 
 export default Sidebar;

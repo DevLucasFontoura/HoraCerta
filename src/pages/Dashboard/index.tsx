@@ -25,31 +25,21 @@ import {
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition';
 import { APP_CONFIG } from '../../constants/app';
+import { WeekData, MonthlyData } from '../../types';
+import { useTimeRecords } from '../../hooks/useTimeRecords';
 
-// Dados de exemplo (baseados nos seus dados existentes)
-const weekData = [
-  { day: 'Segunda', hours: 8.5 },
-  { day: 'Terça', hours: 7.8 },
-  { day: 'Quarta', hours: 8.2 },
-  { day: 'Quinta', hours: 8.0 },
-  { day: 'Sexta', hours: 7.5 },
-];
-
-const monthlyComparison = [
-  { month: 'Jan', expected: 168, actual: 172 },
-  { month: 'Fev', expected: 160, actual: 165 },
-  { month: 'Mar', expected: 176, actual: 170 },
-];
-
+// Dados iniciais vazios
+const weekData: WeekData[] = [];
+const monthlyComparison: MonthlyData[] = [];
 const timeDistribution = [
-  { name: 'Tempo Trabalhado', value: 32 },
-  { name: 'Horas Extras', value: 4 },
-  { name: 'Pausas', value: 5 },
+  { name: 'Tempo Trabalhado', value: 0 },
+  { name: 'Horas Extras', value: 0 },
+  { name: 'Pausas', value: 0 }
 ];
 
 const habitData = Array.from({ length: 31 }, (_, i) => ({
   day: i + 1,
-  registered: Math.random() > 0.2 // Simula dias com e sem registro
+  registered: false
 }));
 
 const colorMap = {
@@ -59,22 +49,42 @@ const colorMap = {
 } as const;
 
 const Dashboard = () => {
+  const { records } = useTimeRecords();
+  
+  const calculateStats = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayRecord = records.find(record => record.date === today);
+    
+    // Calcula total de hoje
+    const todayTotal = todayRecord?.total || '0h 0min';
+    
+    // Calcula total da semana
+    const weekTotal = '0h'; // Implementar cálculo real
+    
+    // Calcula banco de horas
+    const hoursBalance = '0h'; // Implementar cálculo real
+    
+    return { todayTotal, weekTotal, hoursBalance };
+  };
+
+  const { todayTotal, weekTotal, hoursBalance } = calculateStats();
+
   const stats = [
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.TODAY,
-      value: '8h 30min',
+      value: todayTotal,
       icon: <AiOutlineClockCircle size={24} />,
       color: APP_CONFIG.COLORS.PRIMARY
     },
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.WEEK,
-      value: '32h',
+      value: weekTotal,
       icon: <AiOutlineBarChart size={24} />,
       color: APP_CONFIG.COLORS.INFO
     },
     {
       title: APP_CONFIG.MESSAGES.DASHBOARD.BALANCE,
-      value: '+4h',
+      value: hoursBalance,
       icon: <AiOutlineCheckCircle size={24} />,
       color: APP_CONFIG.COLORS.SUCCESS
     }

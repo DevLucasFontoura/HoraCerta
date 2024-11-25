@@ -1,9 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, collection, query, where, orderBy } from 'firebase/firestore';
 
 const firebaseConfig = {
-  // Suas configurações do Firebase aqui
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
@@ -15,3 +14,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Collections
+export const timeRecordsCollection = collection(db, 'timeRecords');
+
+// Queries
+export const getUserTimeRecords = (userId: string) => {
+  return query(
+    timeRecordsCollection,
+    where('userId', '==', userId),
+    orderBy('date', 'desc')
+  );
+};

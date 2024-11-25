@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './store/store';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { PrivateRoute } from './components/PrivateRoute';
 import GlobalStyles from './styles/GlobalStyles';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
@@ -14,29 +14,46 @@ import Settings from './pages/Settings';
 
 function App() {
   return (
-    <Provider store={store}>
-      <GlobalStyles />
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <GlobalStyles />
         <Routes>
           {/* Rotas públicas */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Rotas protegidas dentro do Layout */}
-          <Route path="/" element={<Layout />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/time-record" element={<TimeRecord />} />
-            <Route path="/settings" element={<Settings />} />
+          {/* Rotas protegidas */}
+          <Route element={<Layout />}>
+            <Route path="/home" element={
+              <PrivateRoute>
+                <Home />
+              </PrivateRoute>
+            } />
+            <Route path="/dashboard" element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            } />
+            <Route path="/analytics" element={
+              <PrivateRoute>
+                <Analytics />
+              </PrivateRoute>
+            } />
+            <Route path="/time-record" element={
+              <PrivateRoute>
+                <TimeRecord />
+              </PrivateRoute>
+            } />
+            <Route path="/settings" element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            } />
           </Route>
-
-          {/* Redireciona rotas não encontradas para home */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
-      </BrowserRouter>
-    </Provider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

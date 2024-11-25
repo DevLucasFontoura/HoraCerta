@@ -57,40 +57,29 @@ const tableVariants = {
 
 const Home = () => {
   const [dateFilter, setDateFilter] = useState('');
-  const [records] = useState<TimeRecord[]>([
-    {
-      id: 1,
-      date: '15/03/2024',
-      entry: '08:00:23',
-      lunchOut: '12:00:45',
-      lunchReturn: '13:01:12',
-      exit: '17:00:34',
-      total: '08:00:00',
-      balance: '+00:00:34'
-    }
-  ]);
+  const [records, setRecords] = useState<TimeRecord[]>([]);
 
   const homeCards: DashboardCard[] = [
     {
       id: 'today',
       icon: <AiOutlineClockCircle size={24} />,
       title: 'Hoje',
-      value: '8h 30min',
+      value: '0h 0min',
       footer: 'Meta diária: 8h'
     },
     {
       id: 'week',
       icon: <AiOutlineCalendar size={24} />,
       title: 'Esta Semana',
-      value: '32h',
+      value: '0h',
       footer: 'Meta semanal: 40h'
     },
     {
       id: 'balance',
       icon: <AiOutlineCheck size={24} />,
       title: 'Banco de Horas',
-      value: '+4h',
-      footer: 'Atualizado hoje às 17:00'
+      value: '0h',
+      footer: 'Atualizado hoje às ' + new Date().toLocaleTimeString('pt-BR')
     }
   ];
 

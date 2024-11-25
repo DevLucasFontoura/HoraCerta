@@ -13,16 +13,10 @@ import {
   AiOutlineDelete
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
-
-interface TimeRecord {
-  id: number;
-  date: string;
-  entry: string;
-  lunchOut: string;
-  lunchReturn: string;
-  exit: string;
-  total: string;
-}
+import { useTimeRecords } from '../../hooks/useTimeRecords';
+import LoadingSpinner from '../../components/LoadingSpinner/index';
+import { TimeRecord } from '../../types';
+import { APP_CONFIG } from '../../constants/app';
 
 const statsVariants = {
   hidden: { opacity: 0 },
@@ -57,30 +51,41 @@ const tableVariants = {
 };
 
 const Analytics = () => {
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [records, setRecords] = useState<TimeRecord[]>([
-    {
-      id: 1,
-      date: '15/03/2024',
-      entry: '08:00:23',
-      lunchOut: '12:00:45',
-      lunchReturn: '13:01:12',
-      exit: '17:00:34',
-      total: '8h'
-    }
-  ]);
-  const [editForm, setEditForm] = useState<TimeRecord | null>(null);
+  const { records, loading, updateRecord, deleteRecord, deleteAllRecords } = useTimeRecords();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Omit<TimeRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null>(null);
+
+  const calculateStats = () => {
+    // Calcula total de horas no mês
+    const monthTotal = '0h 0min';
+    
+    // Calcula média diária
+    const dailyAverage = '0h 0min';
+    
+    // Calcula dias trabalhados
+    const workedDays = '0';
+    
+    return { monthTotal, dailyAverage, workedDays };
+  };
+
+  const { monthTotal, dailyAverage, workedDays } = calculateStats();
 
   const handleEdit = (record: TimeRecord) => {
     setEditingId(record.id);
-    setEditForm(record);
+    const editableFields = {
+      date: record.date,
+      entry: record.entry,
+      lunchOut: record.lunchOut,
+      lunchReturn: record.lunchReturn,
+      exit: record.exit,
+      total: record.total
+    };
+    setEditForm(editableFields);
   };
 
-  const handleSave = () => {
-    if (editForm) {
-      setRecords(records.map(record => 
-        record.id === editForm.id ? editForm : record
-      ));
+  const handleSave = async () => {
+    if (editForm && editingId) {
+      await updateRecord(editingId, editForm);
       setEditingId(null);
       setEditForm(null);
     }
@@ -91,9 +96,9 @@ const Analytics = () => {
     setEditForm(null);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este registro?')) {
-      setRecords(records.filter(record => record.id !== id));
+      await deleteRecord(id);
     }
   };
 
@@ -103,6 +108,20 @@ const Analytics = () => {
     }
   };
 
+  const handleReset = async () => {
+    if (window.confirm('Tem certeza que deseja deletar todos os registros? Esta ação não pode ser desfeita.')) {
+      try {
+        await deleteAllRecords();
+      } catch (error) {
+        console.error('Erro ao resetar registros:', error);
+      }
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <PageTransition>
       <Container>
@@ -111,33 +130,35 @@ const Analytics = () => {
           <Subtitle>Visualize e exporte seus registros de ponto</Subtitle>
         </Header>
 
+        <ActionButton 
+          color={APP_CONFIG.COLORS.DANGER}
+          onClick={handleReset}
+          style={{ marginBottom: '1rem' }}
+        >
+          <AiOutlineDelete /> Resetar Dados de Teste
+        </ActionButton>
+
         <Grid variants={statsVariants} initial="hidden" animate="visible">
-          <StatCard
-            variants={statItemVariants}
-          >
+          <StatCard variants={statItemVariants}>
             <StatIcon><AiOutlineClockCircle size={24} /></StatIcon>
             <StatInfo>
-              <StatValue>176h 30min</StatValue>
+              <StatValue>{monthTotal}</StatValue>
               <StatLabel>Total de Horas no Mês</StatLabel>
             </StatInfo>
           </StatCard>
 
-          <StatCard
-            variants={statItemVariants}
-          >
+          <StatCard variants={statItemVariants}>
             <StatIcon><AiOutlineBarChart size={24} /></StatIcon>
             <StatInfo>
-              <StatValue>8h 12min</StatValue>
+              <StatValue>{dailyAverage}</StatValue>
               <StatLabel>Média Diária</StatLabel>
             </StatInfo>
           </StatCard>
 
-          <StatCard
-            variants={statItemVariants}
-          >
+          <StatCard variants={statItemVariants}>
             <StatIcon><AiOutlineCalendar size={24} /></StatIcon>
             <StatInfo>
-              <StatValue>22 dias</StatValue>
+              <StatValue>{workedDays}</StatValue>
               <StatLabel>Dias Trabalhados</StatLabel>
             </StatInfo>
           </StatCard>
