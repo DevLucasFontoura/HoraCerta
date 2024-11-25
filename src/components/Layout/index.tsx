@@ -29,7 +29,7 @@ const Layout = () => {
   const dispatch = useDispatch();
 
   const menuItems = [
-    { path: '/dashboard', icon: <AiOutlineHome size={20} />, label: 'Início' },
+    { path: '/home', icon: <AiOutlineHome size={20} />, label: 'Início' },
     { path: '/time-record', icon: <AiOutlineClockCircle size={20} />, label: 'Registrar Ponto' },
     { path: '/analytics', icon: <AiOutlineBarChart size={20} />, label: 'Relatórios' },
     { path: '/settings', icon: <AiOutlineSetting size={20} />, label: 'Configurações' },

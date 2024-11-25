@@ -53,7 +53,7 @@ const tableVariants = {
   }
 };
 
-const Dashboard = () => {
+const Home = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [records, setRecords] = useState<TimeRecord[]>([
     {
@@ -68,7 +68,7 @@ const Dashboard = () => {
   ]);
   const [editForm, setEditForm] = useState<TimeRecord | null>(null);
 
-  const dashboardCards: DashboardCard[] = [
+  const homeCards: DashboardCard[] = [
     {
       id: 'today',
       icon: <AiOutlineClockCircle size={24} />,
@@ -142,7 +142,7 @@ const Dashboard = () => {
         </Header>
 
         <Grid>
-          {dashboardCards.map((card, i) => (
+          {homeCards.map((card, i) => (
             <Card
               key={card.id}
               custom={i}
@@ -414,4 +414,4 @@ const ActionButton = styled.button<{ color: string }>`
   }
 `;
 
-export default Dashboard;
+export default Home;

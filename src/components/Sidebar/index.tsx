@@ -26,7 +26,7 @@ const Sidebar = () => {
     {
       icon: <AiOutlineHome size={20} />,
       label: 'Início',
-      path: APP_CONFIG.ROUTES.DASHBOARD
+      path: APP_CONFIG.ROUTES.HOME
     },
     {
       icon: <AiOutlineClockCircle size={20} />,

@@ -74,10 +74,9 @@ export const APP_CONFIG = {
 
   // Rotas
   ROUTES: {
-    HOME: '/',
+    HOME: '/home',
     LOGIN: '/login',
     REGISTER: '/register',
-    DASHBOARD: '/dashboard',
     TIME_RECORD: '/time-record',
     ANALYTICS: '/analytics',
     SETTINGS: '/settings'

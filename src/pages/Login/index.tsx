@@ -16,7 +16,7 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(login());
-    navigate('/dashboard');
+    navigate('/home');
   };
 
   return (
