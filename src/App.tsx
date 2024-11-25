@@ -6,10 +6,11 @@ import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Home';
+import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
 import TimeRecord from './pages/TimeRecord';
-import Analytics from './pages/Analytics/index';
-import Settings from './pages/Settings/index';
+import Analytics from './pages/Analytics';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -24,13 +25,14 @@ function App() {
 
           {/* Rotas protegidas dentro do Layout */}
           <Route path="/" element={<Layout />}>
-            <Route path="/home" element={<Dashboard />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/time-record" element={<TimeRecord />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Redireciona rotas não encontradas para o dashboard */}
+          {/* Redireciona rotas não encontradas para home */}
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </BrowserRouter>

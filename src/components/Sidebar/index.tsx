@@ -29,6 +29,11 @@ const Sidebar = () => {
       path: APP_CONFIG.ROUTES.HOME
     },
     {
+      icon: <AiOutlineBarChart size={20} />,
+      label: 'Dashboard',
+      path: APP_CONFIG.ROUTES.DASHBOARD
+    },
+    {
       icon: <AiOutlineClockCircle size={20} />,
       label: 'Registrar Ponto',
       path: APP_CONFIG.ROUTES.TIME_RECORD

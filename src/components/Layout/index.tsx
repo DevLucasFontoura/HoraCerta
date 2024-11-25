@@ -5,8 +5,8 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { logout } from '../../store/slices/authSlice';
 import { 
-  AiOutlineHome,
   AiOutlineClockCircle,
+  AiOutlineHome,
   AiOutlineBarChart,
   AiOutlineSetting,
   AiOutlineLogout,
@@ -30,6 +30,7 @@ const Layout = () => {
 
   const menuItems = [
     { path: '/home', icon: <AiOutlineHome size={20} />, label: 'Início' },
+    { path: '/dashboard', icon: <AiOutlineBarChart size={20} />, label: 'Dashboard' },
     { path: '/time-record', icon: <AiOutlineClockCircle size={20} />, label: 'Registrar Ponto' },
     { path: '/analytics', icon: <AiOutlineBarChart size={20} />, label: 'Relatórios' },
     { path: '/settings', icon: <AiOutlineSetting size={20} />, label: 'Configurações' },
