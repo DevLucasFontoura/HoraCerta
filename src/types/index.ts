@@ -2,6 +2,7 @@ export interface TimeRecord {
     id: string;
     userId: string;
     date: string;
+    displayDate: string;
     entry: string;
     lunchOut: string;
     lunchReturn: string;

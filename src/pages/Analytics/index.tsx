@@ -19,6 +19,7 @@ import { TimeRecord } from '../../types';
 import { APP_CONFIG } from '../../constants/app';
 import { auth } from '../../config/firebase';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
+import { Button } from '../../components/Button';
 
 const statsVariants = {
   hidden: { opacity: 0 },
@@ -53,7 +54,7 @@ const tableVariants = {
 };
 
 const Analytics = () => {
-  const { records, loading, updateRecord, deleteRecord, deleteAllRecords, calculateTotalHours } = useTimeRecords();
+  const { records, loading, updateRecord, deleteRecord, deleteAllRecords, calculateTotalHours, addTestData } = useTimeRecords();
   const { schedule } = useWorkSchedule();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Omit<TimeRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null>(null);
@@ -95,6 +96,7 @@ const Analytics = () => {
     setEditingId(record.id);
     const editableFields = {
       date: record.date,
+      displayDate: record.displayDate,
       entry: record.entry,
       lunchOut: record.lunchOut,
       lunchReturn: record.lunchReturn,
@@ -184,13 +186,14 @@ const Analytics = () => {
           <Subtitle>Visualize e exporte seus registros de ponto</Subtitle>
         </Header>
 
-        <ActionButton 
-          color={APP_CONFIG.COLORS.DANGER}
-          onClick={handleReset}
-          style={{ marginBottom: '1rem' }}
-        >
-          <AiOutlineDelete /> Resetar Dados de Teste
-        </ActionButton>
+        <ButtonContainer>
+          <Button onClick={deleteAllRecords} variant="danger">
+            Resetar Dados de Teste
+          </Button>
+          <Button onClick={addTestData} variant="secondary">
+            Adicionar Dados de Teste
+          </Button>
+        </ButtonContainer>
 
         <Grid variants={statsVariants} initial="hidden" animate="visible">
           <StatCard variants={statItemVariants}>
@@ -435,6 +438,12 @@ const ActionButton = styled.button<{ color: string }>`
   &:hover {
     background: ${props => `${props.color}15`};
   }
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
 `;
 
 export default Analytics;

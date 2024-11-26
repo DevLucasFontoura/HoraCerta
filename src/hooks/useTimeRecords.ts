@@ -3,15 +3,20 @@ import { db, auth } from '../config/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { TimeRecord } from '../types';
 
+const formatTimeDisplay = (timeStr: string) => {
+  if (!timeStr) return '';
+  return timeStr.split(':').slice(0, 2).join(':');
+};
+
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  return `${day} / ${month} / ${year}`;
+};
+
 export const useTimeRecords = () => {
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const formatTimeDisplay = (timeStr: string) => {
-    if (!timeStr) return '';
-    // Remove os segundos se existirem
-    return timeStr.split(':').slice(0, 2).join(':');
-  };
 
   const fetchRecords = async () => {
     const user = auth.currentUser;
@@ -29,6 +34,8 @@ export const useTimeRecords = () => {
         return {
           id: doc.id,
           ...data,
+          displayDate: formatDateDisplay(data.date),
+          date: data.date,
           entry: data.entry ? formatTimeDisplay(data.entry) : '',
           lunchOut: data.lunchOut ? formatTimeDisplay(data.lunchOut) : '',
           lunchReturn: data.lunchReturn ? formatTimeDisplay(data.lunchReturn) : '',
@@ -326,6 +333,50 @@ export const useTimeRecords = () => {
     };
   };
 
+  const addTestData = async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const testData = [
+      {
+        date: '2024-11-25',
+        entry: '08:29',
+        lunchOut: '11:45',
+        lunchReturn: '10:45',
+        exit: '18:50'
+      },
+      {
+        date: '2024-11-26',
+        entry: '08:29',
+        lunchOut: '10:45',
+        lunchReturn: '11:45',
+        exit: '18:50'
+      }
+    ];
+
+    try {
+      const batch = writeBatch(db);
+      
+      for (const data of testData) {
+        const newDoc = {
+          userId: user.uid,
+          ...data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        const docRef = doc(collection(db, 'timeRecords'));
+        batch.set(docRef, newDoc);
+      }
+
+      await batch.commit();
+      await fetchRecords();
+    } catch (error) {
+      console.error('Erro ao adicionar dados de teste:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -339,6 +390,7 @@ export const useTimeRecords = () => {
     deleteAllRecords,
     calculateTotalHours,
     calculateDashboardStats,
-    calculateGraphData
+    calculateGraphData,
+    addTestData
   };
 };
