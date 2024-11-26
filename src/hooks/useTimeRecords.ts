@@ -7,6 +7,12 @@ export const useTimeRecords = () => {
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const formatTimeDisplay = (timeStr: string) => {
+    if (!timeStr) return '';
+    // Remove os segundos se existirem
+    return timeStr.split(':').slice(0, 2).join(':');
+  };
+
   const fetchRecords = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -18,12 +24,19 @@ export const useTimeRecords = () => {
       );
 
       const querySnapshot = await getDocs(q);
-      const fetchedRecords = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt || new Date().toISOString(),
-        updatedAt: doc.data().updatedAt || new Date().toISOString()
-      })) as TimeRecord[];
+      const fetchedRecords = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          entry: data.entry ? formatTimeDisplay(data.entry) : '',
+          lunchOut: data.lunchOut ? formatTimeDisplay(data.lunchOut) : '',
+          lunchReturn: data.lunchReturn ? formatTimeDisplay(data.lunchReturn) : '',
+          exit: data.exit ? formatTimeDisplay(data.exit) : '',
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString()
+        };
+      }) as TimeRecord[];
 
       setRecords(fetchedRecords);
     } catch (error) {
@@ -146,28 +159,47 @@ export const useTimeRecords = () => {
     if (!record.entry || !record.exit) return '0h 0min';
     
     const parseTime = (timeStr: string) => {
-      const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-      return hours * 3600 + minutes * 60 + (seconds || 0);
+      // Converte horário para minutos totais
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return (hours * 60) + minutes;
     };
 
-    // Primeiro período (entrada até saída almoço)
-    const entrySeconds = parseTime(record.entry);
-    const lunchOutSeconds = record.lunchOut ? parseTime(record.lunchOut) : entrySeconds;
-    const firstPeriod = lunchOutSeconds - entrySeconds;
-
-    // Segundo período (retorno almoço até saída)
-    const lunchReturnSeconds = record.lunchReturn ? parseTime(record.lunchReturn) : lunchOutSeconds;
-    const exitSeconds = parseTime(record.exit);
-    const secondPeriod = exitSeconds - lunchReturnSeconds;
-
-    // Total em segundos
-    const totalSeconds = firstPeriod + secondPeriod;
-
-    // Converter para horas e minutos
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    
-    return `${hours}h ${minutes}min`;
+    try {
+      // Primeiro período: entrada até saída almoço
+      const entryTime = parseTime(record.entry);
+      const lunchOutTime = parseTime(record.lunchOut || '');
+      
+      // Segundo período: retorno do almoço até saída
+      const lunchReturnTime = parseTime(record.lunchReturn || '');
+      const exitTime = parseTime(record.exit);
+      
+      // Calcula os períodos
+      const firstPeriod = lunchOutTime - entryTime;
+      const secondPeriod = exitTime - lunchReturnTime;
+      
+      // Total em minutos
+      const totalMinutes = firstPeriod + secondPeriod;
+      
+      // Converte para formato de exibição
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      
+      console.log('Cálculo detalhado:', {
+        entrada: record.entry,
+        saidaAlmoco: record.lunchOut,
+        retornoAlmoco: record.lunchReturn,
+        saida: record.exit,
+        primeiroPeriodo: firstPeriod,
+        segundoPeriodo: secondPeriod,
+        totalMinutos: totalMinutes,
+        resultado: `${hours}h ${minutes}min`
+      });
+      
+      return `${hours}h ${minutes}min`;
+    } catch (error) {
+      console.error('Erro no cálculo:', error);
+      return '0h 0min';
+    }
   };
 
   const parseTimeToMinutes = (timeStr: string) => {
@@ -180,7 +212,7 @@ export const useTimeRecords = () => {
     const todayRecord = records.find(record => record.date === today);
     
     // Total de hoje
-    const todayTotal = todayRecord?.total || '0h';
+    const todayTotal = todayRecord?.total || '0h 0min';
     
     // Total da semana
     const weekStart = new Date();
@@ -192,28 +224,29 @@ export const useTimeRecords = () => {
     
     const weekMinutes = weekRecords.reduce((total, record) => {
       if (!record.total) return total;
-      const [hours, minutes] = record.total.split('h ');
-      return total + (parseInt(hours) * 60) + (parseInt(minutes) || 0);
+      const [hours, minutesStr] = record.total.split('h ');
+      const minutes = parseInt(minutesStr.replace('min', ''));
+      return total + (parseInt(hours) * 60) + minutes;
     }, 0);
     
     const weekTotal = `${Math.floor(weekMinutes/60)}h ${weekMinutes%60}min`;
     
     // Get user settings for work hours
     const userSettings = await getDoc(doc(db, 'workSchedules', auth.currentUser!.uid));
-    const workSchedule = userSettings.data()?.expectedDailyHours || '08:48'; // default to 8h48
+    const workSchedule = userSettings.data()?.expectedDailyHours || '08:48';
     const dailyMinutes = parseTimeToMinutes(workSchedule);
     
-    // Banco de horas (usando configuração do usuário)
+    // Banco de horas
     const workDays = records.length;
     const expectedMinutes = workDays * dailyMinutes;
     
     const totalMinutesWorked = records.reduce((total, record) => {
       if (!record.total) return total;
-      const [hours, minutes] = record.total.split('h ');
-      return total + (parseInt(hours) * 60) + (parseInt(minutes) || 0);
+      const [hours, minutesStr] = record.total.split('h ');
+      const minutes = parseInt(minutesStr.replace('min', ''));
+      return total + (parseInt(hours) * 60) + minutes;
     }, 0);
     
-    // Calcula a diferença (mesmo princípio da fórmula: G12-$C$5)
     const balanceMinutes = totalMinutesWorked - expectedMinutes;
     const hoursBalance = `${Math.floor(Math.abs(balanceMinutes)/60)}h ${Math.abs(balanceMinutes)%60}min`;
     
@@ -228,22 +261,35 @@ export const useTimeRecords = () => {
   const calculateDailyBalance = (record: TimeRecord, expectedDailyHours: string) => {
     if (!record.total) return '0h 0min';
     
-    // Converte o total trabalhado para minutos
-    const [workedHours, workedMinutes] = record.total.split('h ');
-    const totalWorkedMinutes = (parseInt(workedHours) * 60) + (parseInt(workedMinutes) || 0);
-    
-    // Converte as horas esperadas para minutos
-    const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
-    const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
-    
-    // Calcula a diferença
-    const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
-    const hours = Math.floor(Math.abs(diffMinutes) / 60);
-    const minutes = Math.abs(diffMinutes) % 60;
-    
-    return diffMinutes >= 0 
-      ? `+${hours}h ${minutes}min`
-      : `-${hours}h ${minutes}min`;
+    try {
+      // Converte o total trabalhado para minutos
+      const [workedHours, workedMinStr] = record.total.split('h ');
+      const workedMin = parseInt(workedMinStr.replace('min', ''));
+      const totalWorkedMinutes = (parseInt(workedHours) * 60) + workedMin;
+      
+      // Converte a jornada esperada para minutos (8:48 = 528 minutos)
+      const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
+      const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
+      
+      // Calcula a diferença
+      const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
+      const hours = Math.floor(Math.abs(diffMinutes) / 60);
+      const minutes = Math.abs(diffMinutes) % 60;
+      
+      console.log('Cálculo do saldo:', {
+        totalTrabalhado: totalWorkedMinutes,
+        jornadaEsperada: expectedTotalMinutes,
+        diferenca: diffMinutes,
+        resultado: diffMinutes >= 0 ? `+${hours}h ${minutes}min` : `-${hours}h ${minutes}min`
+      });
+      
+      return diffMinutes >= 0 
+        ? `+${hours}h ${minutes}min`
+        : `-${hours}h ${minutes}min`;
+    } catch (error) {
+      console.error('Erro no cálculo do saldo:', error);
+      return '0h 0min';
+    }
   };
 
   const calculateGraphData = (expectedDailyHours: string) => {

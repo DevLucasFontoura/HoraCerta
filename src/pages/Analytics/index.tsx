@@ -60,15 +60,33 @@ const Analytics = () => {
 
   const calculateStats = () => {
     // Calcula total de horas no mês
-    const monthTotal = '0h 0min';
-    
-    // Calcula média diária
-    const dailyAverage = '0h 0min';
+    const currentMonth = new Date().getMonth();
+    const monthRecords = records.filter(record => {
+      const recordMonth = new Date(record.date).getMonth();
+      return recordMonth === currentMonth;
+    });
+
+    // Total de horas no mês
+    const monthMinutes = monthRecords.reduce((total, record) => {
+      if (!record.total) return total;
+      const [hours, minutes] = record.total.split('h ');
+      return total + (parseInt(hours) * 60) + (parseInt(minutes) || 0);
+    }, 0);
+
+    const monthTotal = `${Math.floor(monthMinutes/60)}h ${monthMinutes%60}min`;
     
     // Calcula dias trabalhados
-    const workedDays = '0';
+    const workedDays = monthRecords.length;
     
-    return { monthTotal, dailyAverage, workedDays };
+    // Calcula média diária
+    const averageMinutes = workedDays > 0 ? Math.round(monthMinutes / workedDays) : 0;
+    const dailyAverage = `${Math.floor(averageMinutes/60)}h ${averageMinutes%60}min`;
+    
+    return { 
+      monthTotal, 
+      dailyAverage, 
+      workedDays: workedDays.toString() 
+    };
   };
 
   const { monthTotal, dailyAverage, workedDays } = calculateStats();
