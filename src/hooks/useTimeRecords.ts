@@ -307,29 +307,68 @@ export const useTimeRecords = () => {
       balance: record.total ? calculateDailyBalance(record, expectedDailyHours) : '0h 0min'
     }));
 
-    // Distribuição de tempo
-    const timeDistribution = records.reduce((acc, record) => {
-      if (!record.total) return acc;
+    // Calcula a distribuição de tempo
+    const totalWorkedMinutes = records.reduce((total, record) => {
+      if (!record.total) return total;
+      const [hours, minutesStr] = record.total.split('h ');
+      const minutes = parseInt(minutesStr.replace('min', ''));
+      return total + (parseInt(hours) * 60) + minutes;
+    }, 0);
+
+    const expectedMinutes = records.length * parseTimeToMinutes(expectedDailyHours);
+    const extraMinutes = Math.max(0, totalWorkedMinutes - expectedMinutes);
+    const breaksMinutes = records.reduce((total, record) => {
+      if (!record.lunchOut || !record.lunchReturn) return total;
+      const lunchOutMinutes = parseTimeToMinutes(record.lunchOut);
+      const lunchReturnMinutes = parseTimeToMinutes(record.lunchReturn);
+      return total + (lunchReturnMinutes - lunchOutMinutes);
+    }, 0);
+
+    const timeDistribution = [
+      { name: 'Tempo Trabalhado', value: totalWorkedMinutes - extraMinutes - breaksMinutes },
+      { name: 'Horas Extras', value: extraMinutes },
+      { name: 'Pausas', value: breaksMinutes }
+    ];
+
+    // Cálculo dos dados mensais
+    const monthlyData = records.reduce((acc: { [key: string]: { total: number; count: number } }, record) => {
+      const date = new Date(record.date);
+      const monthKey = `${date.getMonth() + 1}/${date.getFullYear()}`;
       
-      const [hours] = record.total.split('h').map(Number);
-      const balance = calculateDailyBalance(record, expectedDailyHours);
-      const extraHours = balance.startsWith('+') ? parseFloat(balance.split('h')[0]) : 0;
+      const [hours, minutes] = (record.total || '0h 0min')
+        .replace('h ', ':')
+        .replace('min', '')
+        .split(':')
+        .map(Number);
       
-      return {
-        worked: acc.worked + hours,
-        extra: acc.extra + extraHours,
-        breaks: acc.breaks + (record.lunchOut && record.lunchReturn ? 1 : 0)
-      };
-    }, { worked: 0, extra: 0, breaks: 0 });
+      const totalHours = hours + (minutes / 60);
+
+      if (!acc[monthKey]) {
+        acc[monthKey] = { total: 0, count: 0 };
+      }
+      
+      acc[monthKey].total += totalHours;
+      acc[monthKey].count += 1;
+      
+      return acc;
+    }, {});
+
+    const monthlyDataFormatted = Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      total: Number(data.total.toFixed(2)),
+      average: Number((data.total / data.count).toFixed(2))
+    }));
+
+    monthlyDataFormatted.sort((a, b) => {
+      const [monthA, yearA] = a.month.split('/').map(Number);
+      const [monthB, yearB] = b.month.split('/').map(Number);
+      return yearA !== yearB ? yearA - yearB : monthA - monthB;
+    });
 
     return {
-      weekData,
-      timeDistribution: [
-        { name: 'Tempo Trabalhado', value: timeDistribution.worked },
-        { name: 'Horas Extras', value: timeDistribution.extra },
-        { name: 'Pausas', value: timeDistribution.breaks }
-      ],
-      monthlyData: [] // implementar depois
+      weekData: weekData,
+      timeDistribution: timeDistribution,
+      monthlyData: monthlyDataFormatted
     };
   };
 
