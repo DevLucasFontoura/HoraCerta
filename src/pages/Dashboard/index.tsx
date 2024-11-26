@@ -66,8 +66,11 @@ interface GraphData {
   }>;
 }
 
+// Definindo a cor preta pastel
+const SOFT_BLACK = '#404040';
+
 const Dashboard = () => {
-  const { calculateDashboardStats, calculateGraphData } = useTimeRecords();
+  const { calculateDashboardStats, calculateGraphData, records } = useTimeRecords();
   const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
@@ -111,6 +114,32 @@ const Dashboard = () => {
     }
   ];
 
+  // Função atualizada para gerar dados do ano todo
+  const generateHabitData = () => {
+    const today = new Date();
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const daysInYear = 365 + (isLeapYear(today.getFullYear()) ? 1 : 0);
+    
+    // Criar array com todos os dias do ano
+    const habitData = Array.from({ length: daysInYear }, (_, index) => {
+      const date = new Date(startOfYear);
+      date.setDate(index + 1);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      return {
+        date: dateStr,
+        registered: records.some(record => record.date === dateStr)
+      };
+    });
+
+    return habitData;
+  };
+
+  // Função auxiliar para verificar ano bissexto
+  const isLeapYear = (year: number) => {
+    return year % 400 === 0 || (year % 100 !== 0 && year % 4 === 0);
+  };
+
   return (
     <PageTransition>
       <Container>
@@ -119,58 +148,20 @@ const Dashboard = () => {
           <Subtitle>Visualize seus indicadores e métricas</Subtitle>
         </Header>
 
-        <StatsGrid>
-          {dashboardStats.map((stat, index) => (
-            <StatCard
-              key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <StatIcon color={stat.color}>{stat.icon}</StatIcon>
-              <StatInfo>
-                <StatValue>{stat.value}</StatValue>
-                <StatTitle>{stat.title}</StatTitle>
-              </StatInfo>
-            </StatCard>
-          ))}
-        </StatsGrid>
-
-        <ChartsGrid>
+        <ChartsContainer>
           <ChartCard>
-            <ChartTitle>Horas Trabalhadas na Semana</ChartTitle>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={graphData.weekData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="hours" stroke={colorMap.primary} fill={colorMap.primary} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard>
-            <ChartTitle>Distribuição de Tempo</ChartTitle>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={graphData.timeDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                >
-                  {graphData.timeDistribution.map((entry, index) => (
-                    <Cell key={entry.name} fill={Object.values(colorMap)[index]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <ChartTitle>Registros de Ponto</ChartTitle>
+            <HabitKitContainer>
+              <HabitGrid>
+                {generateHabitData().map((day, index) => (
+                  <HabitCell 
+                    key={day.date}
+                    registered={day.registered}
+                    title={`${new Date(day.date).toLocaleDateString('pt-BR')}: ${day.registered ? 'Registrado' : 'Não registrado'}`}
+                  />
+                ))}
+              </HabitGrid>
+            </HabitKitContainer>
           </ChartCard>
 
           <ChartCard>
@@ -181,12 +172,30 @@ const Dashboard = () => {
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="total" fill={colorMap.primary} name="Total" />
-                <Bar dataKey="average" fill={colorMap.info} name="Média" />
+                <Bar dataKey="total" fill={SOFT_BLACK} name="Total" />
+                <Bar dataKey="average" fill={`${SOFT_BLACK}80`} name="Média" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
-        </ChartsGrid>
+
+          <ChartCard>
+            <ChartTitle>Horas Trabalhadas na Semana</ChartTitle>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={graphData.weekData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area 
+                  type="monotone" 
+                  dataKey="hours" 
+                  stroke={SOFT_BLACK} 
+                  fill={`${SOFT_BLACK}40`}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </ChartsContainer>
       </Container>
     </PageTransition>
   );
@@ -212,39 +221,11 @@ const Subtitle = styled.p`
   margin-top: 0.5rem;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-`;
-
-const StatCard = styled(motion.div)`
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid ${APP_CONFIG.COLORS.BORDER};
+const ChartsContainer = styled.div`
   display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const StatIcon = styled.div<{ color: string }>`
-  color: ${props => props.color};
-`;
-
-const StatInfo = styled.div``;
-
-const StatValue = styled.div`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
-`;
-
-const StatTitle = styled.div`
-  color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 2rem;
 `;
 
 const ChartCard = styled.div`
@@ -252,6 +233,7 @@ const ChartCard = styled.div`
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid ${APP_CONFIG.COLORS.BORDER};
+  width: 100%;
 `;
 
 const ChartTitle = styled.h2`
@@ -261,39 +243,35 @@ const ChartTitle = styled.h2`
   margin-bottom: 1.5rem;
 `;
 
-const ChartsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-top: 2rem;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-  }
+const HabitKitContainer = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid ${APP_CONFIG.COLORS.BORDER};
+  padding: 1.5rem;
+  margin: 0 auto;
+  width: 100%;
 `;
 
 const HabitGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(30, 1fr);
   gap: 4px;
-  padding: 1rem;
-  max-width: 400px;
-  margin: 0 auto;
+  width: 100%;
+  aspect-ratio: 3/1;
+  padding: 0.5rem;
 `;
 
 const HabitCell = styled.div<{ registered: boolean }>`
+  width: 100%;
   aspect-ratio: 1;
-  width: 35px;
-  height: 35px;
-  border-radius: 4px;
+  border-radius: 3px;
   background-color: ${({ registered }) => 
-    registered ? APP_CONFIG.COLORS.PRIMARY : '#F5F5F5'};
-  opacity: ${({ registered }) => registered ? 0.8 : 1};
+    registered ? SOFT_BLACK : APP_CONFIG.COLORS.BORDER};
+  opacity: ${({ registered }) => registered ? 1 : 0.3};
   transition: all 0.2s ease;
 
   &:hover {
-    transform: scale(1.1);
-    opacity: 1;
+    transform: scale(1.2);
   }
 `;
 
