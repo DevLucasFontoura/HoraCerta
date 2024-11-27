@@ -437,8 +437,7 @@ const StyledSection = styled(motion.section)`
 
   @media (max-width: 768px) {
     padding: 1rem;
-    width: calc(100% - -16rem);
-    margin-right: 1rem;
+    width: 100%;
     margin-bottom: 1rem;
     border-radius: 8px;
   }
@@ -556,10 +555,12 @@ const MobileView = styled.div`
 `;
 
 const RecordsList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: 51%;
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
 `;
 
 const RecordCard = styled.div`
