@@ -355,6 +355,16 @@ const Analytics = () => {
           <Subtitle>{APP_CONFIG.MESSAGES.ANALYTICS.SUBTITLE}</Subtitle>
         </Header>
 
+        {/* Botões de Teste */}
+        <ButtonContainer>
+          <StyledButton onClick={deleteAllRecords} style={{ background: APP_CONFIG.COLORS.DANGER, color: 'white' }}>
+            Resetar Dados de Teste
+          </StyledButton>
+          <StyledButton onClick={addTestData} style={{ background: APP_CONFIG.COLORS.SECONDARY, color: 'white' }}>
+            Adicionar Dados de Teste
+          </StyledButton>
+        </ButtonContainer>
+
         <StatsGrid>
           <StatsCard>
             <h3>Total de Horas no Mês</h3>
@@ -837,5 +847,18 @@ const CardActions = styled.div`
   margin-top: 1rem;
   justify-content: flex-end;
 `;
+
+// Funções de teste
+const addTestData = async () => {
+  // Implementar a lógica de adicionar dados de teste
+  console.log('Adicionar dados de teste');
+};
+
+const deleteAllRecords = async () => {
+  if (window.confirm('Tem certeza que deseja excluir todos os registros?')) {
+    // Implementar a lógica de deletar todos os registros
+    console.log('Deletar todos os registros');
+  }
+};
 
 export default Analytics;

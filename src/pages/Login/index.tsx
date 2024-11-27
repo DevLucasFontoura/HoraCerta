@@ -21,7 +21,7 @@ const Login = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err: any) {
       console.error('Erro no login:', err);
       if (err.code === 'auth/invalid-credential') {

@@ -1,168 +1,239 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { APP_CONFIG } from '../../constants/app';
+import { auth } from '../../config/firebase';
+import { signOut } from 'firebase/auth';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { 
-  AiOutlineClockCircle,
   AiOutlineHome,
   AiOutlineBarChart,
   AiOutlineSetting,
-  AiOutlineLogout
+  AiOutlineLogout,
+  AiOutlineMenu,
+  AiOutlineClose
 } from 'react-icons/ai';
-import { APP_CONFIG } from '../../constants/app';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../config/firebase';
-
-interface NavItemProps {
-  $active: boolean;
-}
 
 const Sidebar = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { setCurrentUser } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.removeItem('user');
-      navigate('/login');
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      alert('Erro ao fazer logout. Tente novamente.');
-    }
+  // Teste do auth
+  console.log('Auth inicializado:', auth);
+
+  // Adiciona a função toggleSidebar
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen);
   };
 
-  const navItems = [
-    {
-      icon: <AiOutlineHome size={20} />,
-      label: 'Início',
-      path: APP_CONFIG.ROUTES.HOME
-    },
-    {
-      icon: <AiOutlineBarChart size={20} />,
-      label: 'Dashboard',
-      path: APP_CONFIG.ROUTES.DASHBOARD
-    },
-    {
-      icon: <AiOutlineClockCircle size={20} />,
-      label: 'Registrar Ponto',
-      path: APP_CONFIG.ROUTES.TIME_RECORD
-    },
-    {
-      icon: <AiOutlineBarChart size={20} />,
-      label: 'Relatórios',
-      path: APP_CONFIG.ROUTES.ANALYTICS
-    },
-    {
-      icon: <AiOutlineSetting size={20} />,
-      label: 'Configurações',
-      path: APP_CONFIG.ROUTES.SETTINGS
+  const handleSignOut = () => {
+    // 1. Log inicial
+    console.log('Iniciando processo de logout...');
+
+    // 2. Verificar contexto de autenticação
+    if (setCurrentUser) {
+      console.log('setCurrentUser está disponível');
+    } else {
+      console.warn('setCurrentUser não está definido');
     }
+
+    // 3. Teste do Firebase
+    signOut(auth)
+      .then(() => {
+        console.log('Firebase: Logout realizado com sucesso');
+        
+        // 4. Atualizar contexto
+        if (setCurrentUser) {
+          setCurrentUser(null);
+          console.log('Contexto: usuário definido como null');
+        }
+
+        // 5. Navegação
+        console.log('Tentando navegar para /login');
+        navigate('/login');
+        console.log('Navegação executada');
+      })
+      .catch((error) => {
+        console.error('Erro durante o logout:', error);
+      });
+  };
+
+  // Teste simples do botão
+  const testClick = () => {
+    console.log('Teste de clique funcionando');
+  };
+
+  const menuItems = [
+    { path: '/', icon: <AiOutlineHome size={24} />, label: 'Início' },
+    { path: '/analytics', icon: <AiOutlineBarChart size={24} />, label: 'Relatórios' },
+    { path: '/settings', icon: <AiOutlineSetting size={24} />, label: 'Configurações' }
   ];
 
   return (
-    <Container>
-      <LogoContainer>
-        <AiOutlineClockCircle size={24} />
-        <LogoText>{APP_CONFIG.NAME}</LogoText>
-      </LogoContainer>
+    <>
+      <MenuButton onClick={toggleSidebar}>
+        {isOpen ? <AiOutlineClose size={24} /> : <AiOutlineMenu size={24} />}
+      </MenuButton>
 
-      <Nav>
-        {navItems.map((item) => (
-          <NavItem
-            key={item.path}
-            to={item.path}
-            $active={location.pathname === item.path}
-          >
-            {item.icon}
-            <NavLabel>{item.label}</NavLabel>
-          </NavItem>
-        ))}
-      </Nav>
+      <SidebarContainer isOpen={isOpen}>
+        <Logo>
+          <img src="/logo.svg" alt="Logo" />
+          <span>Ponto Digital</span>
+        </Logo>
 
-      <LogoutButton onClick={handleLogout}>
-        <AiOutlineLogout size={20} />
-        <span>Sair</span>
-      </LogoutButton>
-    </Container>
+        <Nav>
+          {menuItems.map((item) => (
+            <NavItem
+              key={item.path}
+              to={item.path}
+              active={location.pathname === item.path}
+              onClick={() => setIsOpen(false)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </NavItem>
+          ))}
+        </Nav>
+
+        <LogoutButton 
+          type="button"
+          onClick={() => {
+            console.log('Botão clicado');
+            testClick();
+            handleSignOut();
+          }}
+          style={{ border: '2px solid red' }} // Teste visual temporário
+        >
+          <AiOutlineLogout size={24} />
+          <span>Sair</span>
+        </LogoutButton>
+      </SidebarContainer>
+
+      {isOpen && <Overlay onClick={toggleSidebar} />}
+    </>
   );
 };
 
-const Container = styled.aside`
-  width: 240px;
-  height: 100vh;
-  padding: 1.5rem 1rem;
-  background: #ffffff;
-  border-right: 1px solid #eaeaea;
+const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   position: fixed;
   left: 0;
   top: 0;
+  bottom: 0;
+  width: 240px;
+  background: white;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
+  z-index: 1000;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    transform: translateX(${props => props.isOpen ? '0' : '-100%'});
+    transition: transform 0.3s ease;
+  }
 `;
 
-const LogoContainer = styled.div`
+const Logo = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 1rem;
   margin-bottom: 2rem;
-  padding: 0.5rem;
-  color: ${APP_CONFIG.COLORS.PRIMARY};
-`;
 
-const LogoText = styled.span`
-  font-size: 1.25rem;
-  font-weight: 600;
+  img {
+    width: 32px;
+    height: 32px;
+  }
+
+  span {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  }
 `;
 
 const Nav = styled.nav`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 `;
 
-const NavItem = styled(Link)<NavItemProps>`
+const NavItem = styled(Link)<{ active: boolean }>`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  color: ${props => props.$active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.TEXT.PRIMARY};
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   text-decoration: none;
-  transition: all 0.2s;
-  background: ${props => props.$active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
-  
-  &:hover {
-    background: ${APP_CONFIG.COLORS.PRIMARY}10;
-    color: ${APP_CONFIG.COLORS.PRIMARY};
-  }
-`;
+  color: ${props => props.active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.TEXT.SECONDARY};
+  background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
-const NavLabel = styled.span`
-  font-size: 0.9rem;
-  font-weight: 500;
+  &:hover {
+    background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}15` : `${APP_CONFIG.COLORS.TEXT.SECONDARY}10`};
+  }
+
+  span {
+    font-size: 0.875rem;
+    font-weight: ${props => props.active ? '500' : '400'};
+  }
 `;
 
 const LogoutButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  margin-top: auto;
-  background: none;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
   border: none;
-  border-radius: 4px;
-  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  color: ${APP_CONFIG.COLORS.DANGER};
   cursor: pointer;
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  margin-top: auto;
 
   &:hover {
-    background: ${APP_CONFIG.COLORS.DANGER}15;
-    color: ${APP_CONFIG.COLORS.DANGER};
+    background: ${`${APP_CONFIG.COLORS.DANGER}10`};
   }
 
   span {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 0.875rem;
+  }
+`;
+
+const MenuButton = styled.button`
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  display: none;
+  padding: 0.5rem;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    display: block;
+  }
+`;
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
   }
 `;
 
