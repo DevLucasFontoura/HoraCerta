@@ -11,20 +11,22 @@ import {
   AiOutlineClose,
   AiOutlineDownload
 } from 'react-icons/ai';
+import { FaFileExport } from 'react-icons/fa';
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 import { useAuth } from '../../contexts/AuthContext';
+import * as XLSX from 'xlsx';
 
 interface TimeRecord {
-  id: number;
+  id: string;
   date: string;
-  entry: string;
-  lunchOut: string;
-  lunchReturn: string;
-  exit: string;
-  total: string;
-  balance: string;
+  entry?: string;
+  lunchOut?: string;
+  lunchReturn?: string;
+  exit?: string;
+  total?: string;
+  balance?: string;
 }
 
 interface DashboardCard {
@@ -68,6 +70,7 @@ const Home = () => {
     hoursBalance: '0h',
     lastUpdate: ''
   });
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const firstName = currentUser?.displayName?.split(' ')[0] || 'usuário';
 
@@ -166,6 +169,98 @@ const Home = () => {
     return `${day} / ${month} / ${year}`;
   };
 
+  const calculateMonthlyBalance = (records: TimeRecord[], expectedDailyHours: string) => {
+    let totalBalance = 0;
+
+    records.forEach(record => {
+      if (record.total) {
+        const [recordHours, recordMinutes] = record.total.split(':').map(Number);
+        const [expectedHours, expectedMinutes] = expectedDailyHours.split(':').map(Number);
+        
+        // Converte tudo para minutos para facilitar o cálculo
+        const recordTotalMinutes = (recordHours * 60) + recordMinutes;
+        const expectedTotalMinutes = (expectedHours * 60) + expectedMinutes;
+        
+        // Calcula a diferença
+        totalBalance += (recordTotalMinutes - expectedTotalMinutes);
+      }
+    });
+
+    // Converte o resultado final de volta para horas e minutos
+    const hours = Math.floor(Math.abs(totalBalance) / 60);
+    const minutes = Math.abs(totalBalance) % 60;
+
+    // Formata o resultado com o sinal adequado
+    return `${totalBalance >= 0 ? '+' : '-'}${hours}h ${minutes}min`;
+  };
+
+  const generateWorksheet = (records: TimeRecord[], monthTitle: string) => {
+    const data = records.map(record => ({
+      'Data': formatDate(record.date),
+      'Entrada': record.entry || '-',
+      'Saída Almoço': record.lunchOut || '-',
+      'Retorno': record.lunchReturn || '-',
+      'Saída': record.exit || '-',
+      'Total': record.total || '-',
+      'Saldo': record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours) : '-',
+    }));
+
+    // Adiciona o banco de horas do mês
+    const monthlyBalance = calculateMonthlyBalance(records, schedule.expectedDailyHours);
+    data.push({
+      'Data': 'Banco de Horas do Mês',
+      'Entrada': '',
+      'Saída Almoço': '',
+      'Retorno': '',
+      'Saída': '',
+      'Total': '',
+      'Saldo': monthlyBalance,
+    });
+
+    return XLSX.utils.json_to_sheet(data);
+  };
+
+  const exportAllMonths = () => {
+    const wb = XLSX.utils.book_new();
+    
+    // Agrupa registros por mês
+    const recordsByMonth = records.reduce((acc, record) => {
+      const date = new Date(record.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!acc[monthKey]) {
+        acc[monthKey] = [];
+      }
+      acc[monthKey].push(record);
+      return acc;
+    }, {} as Record<string, TimeRecord[]>);
+
+    // Cria uma planilha para cada mês
+    Object.entries(recordsByMonth).forEach(([monthKey, monthRecords]) => {
+      const [year, month] = monthKey.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('pt-BR', { month: 'long' });
+      const sheetName = `${monthName} ${year}`;
+      
+      const ws = generateWorksheet(monthRecords, sheetName);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    XLSX.writeFile(wb, 'Relatório Completo.xlsx');
+    setShowExportModal(false);
+  };
+
+  const exportSelectedMonth = () => {
+    const wb = XLSX.utils.book_new();
+    const [year, month] = selectedMonth.split('-');
+    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('pt-BR', { month: 'long' });
+    const sheetName = `${monthName} ${year}`;
+
+    const ws = generateWorksheet(filteredRecords, sheetName);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    
+    XLSX.writeFile(wb, `Relatório ${monthName} ${year}.xlsx`);
+    setShowExportModal(false);
+  };
+
   return (
     <PageTransition>
       <Container>
@@ -199,8 +294,8 @@ const Home = () => {
         </StatsGrid>
 
         <Section>
-          <SectionHeader>
-            <DesktopHeader>
+          <DesktopView>
+            <SectionHeader>
               <SectionTitle>Histórico Detalhado</SectionTitle>
               <MonthSelector>
                 <label>Mês:</label>
@@ -210,32 +305,11 @@ const Home = () => {
                   onChange={(e) => setSelectedMonth(e.target.value)}
                 />
               </MonthSelector>
-            </DesktopHeader>
-            <ExportButton onClick={handleExport} className="desktop-button">
-              <AiOutlineDownload size={20} />
-              <span>Exportar Relatório</span>
-            </ExportButton>
+              <ExportButton onClick={() => setShowExportModal(true)}>
+                Exportar Relatório
+              </ExportButton>
+            </SectionHeader>
 
-            <MobileHeader>
-              <TitleContainer>
-                <SectionTitle>Histórico Detalhado</SectionTitle>
-                <ExportButton onClick={handleExport} className="mobile-button">
-                  <AiOutlineDownload size={20} />
-                  <span>Exportar Relatório</span>
-                </ExportButton>
-              </TitleContainer>
-              <MonthSelector>
-                <label>Mês:</label>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                />
-              </MonthSelector>
-            </MobileHeader>
-          </SectionHeader>
-
-          <DesktopView>
             <Table>
               <thead>
                 <tr>
@@ -258,12 +332,12 @@ const Home = () => {
                     <td>{record.exit || '-'}</td>
                     <td>{record.total || '-'}</td>
                     <td style={{ 
-                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                      color: record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours).startsWith('+') 
                         ? 'green' 
                         : 'red' 
                         : 'inherit'
                     }}>
-                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                      {record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours) : '-'}
                     </td>
                   </tr>
                 ))}
@@ -272,51 +346,87 @@ const Home = () => {
           </DesktopView>
 
           <MobileView>
+            <SectionHeader>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <SectionTitle>Histórico Detalhado</SectionTitle>
+                <ExportIcon onClick={() => setShowExportModal(true)} />
+              </div>
+              <MonthSelector>
+                <label>Mês:</label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                />
+              </MonthSelector>
+            </SectionHeader>
+
             <RecordsList>
               {sortedRecords.map((record) => (
                 <RecordCard key={record.id}>
                   <RecordHeader>
                     <RecordDate>{formatDate(record.date)}</RecordDate>
                     <RecordBalance style={{ 
-                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                      color: record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours).startsWith('+') 
                         ? 'green' 
                         : 'red' 
                         : 'inherit'
                     }}>
-                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                      {record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours) : '-'}
                     </RecordBalance>
                   </RecordHeader>
-                  
                   <RecordTimes>
                     <TimeItem>
                       <TimeLabel>Entrada</TimeLabel>
                       <TimeValue>{record.entry || '-'}</TimeValue>
                     </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
+                    <TimeSeparator>|</TimeSeparator>
                     <TimeItem>
-                      <TimeLabel>Almoço</TimeLabel>
+                      <TimeLabel>Saída Almoço</TimeLabel>
                       <TimeValue>{record.lunchOut || '-'}</TimeValue>
                     </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
+                    <TimeSeparator>|</TimeSeparator>
                     <TimeItem>
                       <TimeLabel>Retorno</TimeLabel>
                       <TimeValue>{record.lunchReturn || '-'}</TimeValue>
                     </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
+                    <TimeSeparator>|</TimeSeparator>
                     <TimeItem>
                       <TimeLabel>Saída</TimeLabel>
                       <TimeValue>{record.exit || '-'}</TimeValue>
                     </TimeItem>
                   </RecordTimes>
-                  
                   <RecordFooter>
-                    <TotalLabel>Total do dia:</TotalLabel>
+                    <TotalLabel>Total</TotalLabel>
                     <TotalValue>{record.total || '-'}</TotalValue>
                   </RecordFooter>
                 </RecordCard>
               ))}
             </RecordsList>
           </MobileView>
+
+          {showExportModal && (
+            <Modal>
+              <ModalContent>
+                <ModalHeader>
+                  <h2>Exportar Relatório</h2>
+                  <CloseButton onClick={() => setShowExportModal(false)}>×</CloseButton>
+                </ModalHeader>
+                
+                <ModalBody>
+                  <ExportOption onClick={exportAllMonths}>
+                    <h3>Exportar Tudo</h3>
+                    <p>Exporta todos os registros separados por mês</p>
+                  </ExportOption>
+                  
+                  <ExportOption onClick={exportSelectedMonth}>
+                    <h3>Exportar Mês Selecionado</h3>
+                    <p>Exporta apenas os registros do mês atual</p>
+                  </ExportOption>
+                </ModalBody>
+              </ModalContent>
+            </Modal>
+          )}
         </Section>
       </Container>
     </PageTransition>
@@ -449,35 +559,12 @@ const Section = styled(motion.section)`
 
 const SectionHeader = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 1rem;
   margin-bottom: 1rem;
   
   @media (max-width: 768px) {
-    flex-direction: column;
     align-items: stretch;
-    gap: 1rem;
-  }
-`;
-
-const TitleContainer = styled.div`
-  display: none;
-
-  @media (max-width: 768px) {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-`;
-
-const DesktopHeader = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-
-  @media (max-width: 768px) {
-    display: none;
   }
 `;
 
@@ -486,49 +573,9 @@ const SectionTitle = styled.h2`
   font-weight: 600;
   color: #111111;
   margin: 0;
-  margin-bottom: 1rem;
   
   @media (max-width: 768px) {
     font-size: 1.1rem;
-    margin-bottom: 0;
-  }
-`;
-
-const ExportButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  background: #10B981;
-  color: white;
-  cursor: pointer;
-  font-size: 0.9rem;
-  white-space: nowrap;
-
-  &.mobile-button {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    &.desktop-button {
-      display: none;
-    }
-
-    &.mobile-button {
-      display: flex;
-      padding: 0.5rem;
-      
-      span {
-        display: none;
-      }
-    }
-  }
-
-  &:hover {
-    background: #059669;
   }
 `;
 
@@ -687,14 +734,117 @@ const Table = styled.table`
   }
 `;
 
-const MobileHeader = styled.div`
-  display: none;
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
 
-  @media (max-width: 768px) {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  padding: 1.5rem;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  
+  &:hover {
+    opacity: 0.7;
+  }
+`;
+
+const ModalBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const ExportOption = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  background: white;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f9f9f9;
+    border-color: #10B981;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+  }
+
+  p {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+    color: #666;
+  }
+`;
+
+const ExportIcon = styled(FaFileExport)`
+  cursor: pointer;
+  color: white;
+  font-size: 1rem;
+  background-color: #10B981;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+
+  &:hover {
+    background-color: #059669;
+  }
+`;
+
+const ExportButton = styled.button`
+  padding: 0.5rem 1rem;
+  background: #10B981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  margin-left: 1rem;
+  
+  &:hover {
+    background: #059669;
   }
 `;
 

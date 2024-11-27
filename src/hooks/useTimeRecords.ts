@@ -302,12 +302,12 @@ export const useTimeRecords = () => {
       const hours = Math.floor(Math.abs(diffMinutes) / 60);
       const minutes = Math.abs(diffMinutes) % 60;
       
-      console.log('Cálculo do saldo:', {
-        totalTrabalhado: totalWorkedMinutes,
-        jornadaEsperada: expectedTotalMinutes,
-        diferenca: diffMinutes,
-        resultado: diffMinutes >= 0 ? `+${hours}h ${minutes}min` : `-${hours}h ${minutes}min`
-      });
+      // console.log('Cálculo do saldo:', {
+      //   totalTrabalhado: totalWorkedMinutes,
+      //   jornadaEsperada: expectedTotalMinutes,
+      //   diferenca: diffMinutes,
+      //   resultado: diffMinutes >= 0 ? `+${hours}h ${minutes}min` : `-${hours}h ${minutes}min`
+      // });
       
       return diffMinutes >= 0 
         ? `+${hours}h ${minutes}min`
