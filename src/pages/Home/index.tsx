@@ -86,7 +86,26 @@ const Home = () => {
     fetchStats();
   }, [calculateDashboardStats]);
 
-  const [dateFilter, setDateFilter] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const filteredRecords = records.filter(record => {
+    const recordDate = new Date(record.date);
+    const recordYear = recordDate.getFullYear().toString();
+    const recordMonth = String(recordDate.getMonth() + 1).padStart(2, '0');
+    
+    const [yearFilter, monthFilter] = selectedMonth.split('-');
+    
+    return recordYear === yearFilter && recordMonth === monthFilter;
+  });
+
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
 
   const formatWorkload = (time: string) => {
     const [hours, minutes] = time.split(':');
@@ -140,8 +159,11 @@ const Home = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day} / ${month} / ${year}`;
   };
 
   return (
@@ -180,13 +202,14 @@ const Home = () => {
           <SectionHeader>
             <DesktopHeader>
               <SectionTitle>Histórico Detalhado</SectionTitle>
-              <FilterContainer>
-                <FilterInput
+              <MonthSelector>
+                <label>Mês:</label>
+                <input
                   type="month"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
                 />
-              </FilterContainer>
+              </MonthSelector>
             </DesktopHeader>
             <ExportButton onClick={handleExport} className="desktop-button">
               <AiOutlineDownload size={20} />
@@ -201,13 +224,14 @@ const Home = () => {
                   <span>Exportar Relatório</span>
                 </ExportButton>
               </TitleContainer>
-              <FilterContainer>
-                <FilterInput
+              <MonthSelector>
+                <label>Mês:</label>
+                <input
                   type="month"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
                 />
-              </FilterContainer>
+              </MonthSelector>
             </MobileHeader>
           </SectionHeader>
 
@@ -225,7 +249,7 @@ const Home = () => {
                 </tr>
               </thead>
               <tbody>
-                {records.map((record) => (
+                {sortedRecords.map((record) => (
                   <tr key={record.id}>
                     <td>{formatDate(record.date)}</td>
                     <td>{record.entry || '-'}</td>
@@ -249,7 +273,7 @@ const Home = () => {
 
           <MobileView>
             <RecordsList>
-              {records.map((record) => (
+              {sortedRecords.map((record) => (
                 <RecordCard key={record.id}>
                   <RecordHeader>
                     <RecordDate>{formatDate(record.date)}</RecordDate>
@@ -508,25 +532,26 @@ const ExportButton = styled.button`
   }
 `;
 
-const FilterContainer = styled.div`
+const MonthSelector = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  
-  @media (max-width: 768px) {
-    width: 100%;
-  }
-`;
 
-const FilterInput = styled.input`
-  padding: 0.5rem;
-  border: 1px solid #eaeaea;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  
-  @media (max-width: 768px) {
-    width: 100%;
-    box-sizing: border-box;
+  label {
+    color: #666666;
+    font-size: 0.875rem;
+  }
+
+  input {
+    padding: 0.5rem;
+    border: 1px solid #eaeaea;
+    border-radius: 4px;
+    font-size: 0.875rem;
+
+    &:focus {
+      outline: none;
+      border-color: #10B981;
+    }
   }
 `;
 
