@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '../config/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, writeBatch, getDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { TimeRecord } from '../types';
 
 const formatTimeDisplay = (timeStr: string) => {
@@ -25,30 +25,34 @@ export const useTimeRecords = () => {
     try {
       const q = query(
         collection(db, 'timeRecords'),
-        where('userId', '==', user.uid)
+        where('userId', '==', user.uid),
+        orderBy('date', 'desc')
       );
 
-      const querySnapshot = await getDocs(q);
-      const fetchedRecords = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          displayDate: formatDateDisplay(data.date),
-          date: data.date,
-          entry: data.entry ? formatTimeDisplay(data.entry) : '',
-          lunchOut: data.lunchOut ? formatTimeDisplay(data.lunchOut) : '',
-          lunchReturn: data.lunchReturn ? formatTimeDisplay(data.lunchReturn) : '',
-          exit: data.exit ? formatTimeDisplay(data.exit) : '',
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || new Date().toISOString()
-        };
-      }) as TimeRecord[];
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedRecords = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            displayDate: formatDateDisplay(data.date),
+            date: data.date,
+            entry: data.entry ? formatTimeDisplay(data.entry) : '',
+            lunchOut: data.lunchOut ? formatTimeDisplay(data.lunchOut) : '',
+            lunchReturn: data.lunchReturn ? formatTimeDisplay(data.lunchReturn) : '',
+            exit: data.exit ? formatTimeDisplay(data.exit) : '',
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString()
+          };
+        }) as TimeRecord[];
 
-      setRecords(fetchedRecords);
+        setRecords(fetchedRecords);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
     } catch (error) {
       console.error('Erro ao buscar registros:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -95,6 +99,7 @@ export const useTimeRecords = () => {
         };
         await addDoc(collection(db, 'timeRecords'), newRecord);
       }
+      
       await fetchRecords();
     } catch (error) {
       console.error('Erro ao registrar ponto:', error);
