@@ -296,7 +296,12 @@ const Home = () => {
         <Section>
           <DesktopView>
             <SectionHeader>
-              <SectionTitle>Histórico Detalhado</SectionTitle>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <SectionTitle>Histórico Detalhado</SectionTitle>
+                <ExportButton onClick={() => setShowExportModal(true)}>
+                  <FaFileExport /> Exportar Dados
+                </ExportButton>
+              </div>
               <MonthSelector>
                 <label>Mês:</label>
                 <input
@@ -305,9 +310,6 @@ const Home = () => {
                   onChange={(e) => setSelectedMonth(e.target.value)}
                 />
               </MonthSelector>
-              <ExportButton onClick={() => setShowExportModal(true)}>
-                Exportar Relatório
-              </ExportButton>
             </SectionHeader>
 
             <Table>
@@ -834,17 +836,21 @@ const ExportIcon = styled(FaFileExport)`
 `;
 
 const ExportButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.5rem 1rem;
-  background: #10B981;
+  background-color: #10B981;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.875rem;
   margin-left: 1rem;
+  gap: 0.5rem;
   
   &:hover {
-    background: #059669;
+    background-color: #059669;
   }
 `;
 
