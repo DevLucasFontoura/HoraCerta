@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { 
@@ -14,7 +14,7 @@ import LoadingSpinner from '../../components/LoadingSpinner/index';
 import { TimeRecord } from '../../types';
 import { auth } from '../../config/firebase';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
-import { Button } from '../../components/Button';
+import { APP_CONFIG } from '../../constants/app';
 import Modal from '../../components/Modal/index';
 
 const statsVariants = {
@@ -49,313 +49,501 @@ const tableVariants = {
   }
 };
 
+const StyledButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const SaveButton = styled(StyledButton)`
+  background: ${APP_CONFIG.COLORS.SUCCESS};
+  color: white;
+`;
+
+const CancelButton = styled(StyledButton)`
+  background: ${APP_CONFIG.COLORS.SECONDARY};
+  color: white;
+`;
+
+const EditButton = styled(StyledButton)`
+  background: ${APP_CONFIG.COLORS.INFO};
+  color: white;
+`;
+
+const DeleteButton = styled(StyledButton)`
+  background: ${APP_CONFIG.COLORS.DANGER};
+  color: white;
+`;
+
+const EditModal = ({ record, onClose, onSave }: {
+  record: TimeRecord;
+  onClose: () => void;
+  onSave: (id: string, data: Partial<TimeRecord>) => void;
+}) => {
+  const [formData, setFormData] = useState({
+    entry: record.entry || '',
+    lunchOut: record.lunchOut || '',
+    lunchReturn: record.lunchReturn || '',
+    exit: record.exit || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(record.id, formData);
+    onClose();
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  return (
+    <ModalOverlay>
+      <ModalContainer>
+        <ModalHeader>
+          <h2>Editar Registro</h2>
+          <CloseButton onClick={onClose}>&times;</CloseButton>
+        </ModalHeader>
+
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <InputGroup>
+              <label>Data:</label>
+              <input
+                type="text"
+                value={record.displayDate || record.date}
+                disabled
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <label>Entrada:</label>
+              <input
+                type="time"
+                name="entry"
+                value={formData.entry}
+                onChange={handleChange}
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <label>Saída para Almoço:</label>
+              <input
+                type="time"
+                name="lunchOut"
+                value={formData.lunchOut}
+                onChange={handleChange}
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <label>Retorno do Almoço:</label>
+              <input
+                type="time"
+                name="lunchReturn"
+                value={formData.lunchReturn}
+                onChange={handleChange}
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <label>Saída:</label>
+              <input
+                type="time"
+                name="exit"
+                value={formData.exit}
+                onChange={handleChange}
+              />
+            </InputGroup>
+          </ModalBody>
+
+          <ModalFooter>
+            <CancelButton type="button" onClick={onClose}>
+              Cancelar
+            </CancelButton>
+            <SaveButton type="submit">
+              Salvar Alterações
+            </SaveButton>
+          </ModalFooter>
+        </form>
+      </ModalContainer>
+    </ModalOverlay>
+  );
+};
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const ModalContainer = styled.div`
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid ${APP_CONFIG.COLORS.BORDER};
+
+  h2 {
+    font-size: 1.25rem;
+    color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+    margin: 0;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+  
+  &:hover {
+    color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 1.5rem;
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid ${APP_CONFIG.COLORS.BORDER};
+`;
+
+const InputGroup = styled.div`
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+    font-size: 0.875rem;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid ${APP_CONFIG.COLORS.BORDER};
+    border-radius: 4px;
+    font-size: 1rem;
+
+    &:disabled {
+      background-color: #f5f5f5;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: ${APP_CONFIG.COLORS.PRIMARY};
+    }
+  }
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+`;
+
+const StatsCard = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  h3 {
+    color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+`;
+
 const Analytics = () => {
-  const { records, loading, updateRecord, deleteRecord, deleteAllRecords, calculateTotalHours, addTestData } = useTimeRecords();
-  const { schedule } = useWorkSchedule();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Omit<TimeRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { records, loading, updateRecord, deleteRecord } = useTimeRecords();
   const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
+  const [stats, setStats] = useState({
+    monthlyHours: '0h',
+    dailyAverage: '0h',
+    workedDays: 0
+  });
+
+  // Ordenar registros por data (mais recente primeiro)
+  const sortedRecords = [...records].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  useEffect(() => {
+    calculateStats();
+  }, [records]);
 
   const calculateStats = () => {
-    // Calcula total de horas no mês
-    const currentMonth = new Date().getMonth();
+    // Filtra registros do mês atual
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
     const monthRecords = records.filter(record => {
-      const recordMonth = new Date(record.date).getMonth();
-      return recordMonth === currentMonth;
+      const recordDate = new Date(record.date);
+      return recordDate.getMonth() === currentMonth && 
+             recordDate.getFullYear() === currentYear;
     });
 
-    // Total de horas no mês
-    const monthMinutes = monthRecords.reduce((total, record) => {
+    // Calcula total de horas do mês
+    const totalMinutes = monthRecords.reduce((total, record) => {
       if (!record.total) return total;
       const [hours, minutes] = record.total.split('h ');
-      return total + (parseInt(hours) * 60) + (parseInt(minutes) || 0);
+      return total + (parseInt(hours) * 60) + parseInt(minutes || '0');
     }, 0);
 
-    const monthTotal = `${Math.floor(monthMinutes/60)}h ${monthMinutes%60}min`;
-    
-    // Calcula dias trabalhados
-    const workedDays = monthRecords.length;
+    const monthlyHours = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min`;
     
     // Calcula média diária
-    const averageMinutes = workedDays > 0 ? Math.round(monthMinutes / workedDays) : 0;
-    const dailyAverage = `${Math.floor(averageMinutes/60)}h ${averageMinutes%60}min`;
-    
-    return { 
-      monthTotal, 
-      dailyAverage, 
-      workedDays: workedDays.toString() 
-    };
+    const workedDays = monthRecords.length;
+    const averageMinutes = workedDays > 0 ? Math.round(totalMinutes / workedDays) : 0;
+    const dailyAverage = `${Math.floor(averageMinutes / 60)}h ${averageMinutes % 60}min`;
+
+    setStats({
+      monthlyHours,
+      dailyAverage,
+      workedDays
+    });
   };
-
-  const { monthTotal, dailyAverage, workedDays } = calculateStats();
-
-  const handleEdit = (record: TimeRecord) => {
-    setSelectedRecord(record);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (editForm && editingId) {
-      // Calcula o total antes de salvar
-      const updatedForm = {
-        ...editForm,
-        total: calculateTotalHours({
-          ...editForm,
-          id: editingId,
-          userId: auth.currentUser!.uid,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        } as TimeRecord)
-      };
-      
-      await updateRecord(editingId, updatedForm);
-      setEditingId(null);
-      setEditForm(null);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditForm(null);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este registro?')) {
-      await deleteRecord(id);
-    }
-  };
-
-  const handleInputChange = (field: keyof TimeRecord, value: string) => {
-    if (editForm) {
-      setEditForm({ ...editForm, [field]: value });
-    }
-  };
-
-  const handleReset = async () => {
-    if (window.confirm('Tem certeza que deseja deletar todos os registros? Esta ação não pode ser desfeita.')) {
-      try {
-        await deleteAllRecords();
-      } catch (error) {
-        console.error('Erro ao resetar registros:', error);
-      }
-    }
-  };
-
-  const calculateDailyBalance = (record: { total: string | undefined }, expectedDailyHours: string) => {
-    if (!record.total) return '0h 0min';
-    
-    // Converte o total trabalhado para minutos
-    const [workedHours, workedMinutes] = record.total.split('h ');
-    const totalWorkedMinutes = (parseInt(workedHours) * 60) + (parseInt(workedMinutes) || 0);
-    
-    // Converte as horas esperadas para minutos
-    const [expectedHours, expectedMinutes] = expectedDailyHours.split(':');
-    const expectedTotalMinutes = (parseInt(expectedHours) * 60) + parseInt(expectedMinutes);
-    
-    // Calcula a diferença
-    const diffMinutes = totalWorkedMinutes - expectedTotalMinutes;
-    const hours = Math.floor(Math.abs(diffMinutes) / 60);
-    const minutes = Math.abs(diffMinutes) % 60;
-    
-    return diffMinutes >= 0 
-      ? `+${hours}h ${minutes}min`
-      : `-${hours}h ${minutes}min`;
-  };
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
 
   return (
     <PageTransition>
       <Container>
         <Header>
-          <Title>Relatórios</Title>
-          <Subtitle>Visualize e exporte seus registros de ponto</Subtitle>
+          <Title>{APP_CONFIG.MESSAGES.ANALYTICS.TITLE}</Title>
+          <Subtitle>{APP_CONFIG.MESSAGES.ANALYTICS.SUBTITLE}</Subtitle>
         </Header>
 
-        <ButtonContainer>
-          <Button onClick={deleteAllRecords} variant="danger">
-            Resetar Dados de Teste
-          </Button>
-          <Button onClick={addTestData} variant="secondary">
-            Adicionar Dados de Teste
-          </Button>
-        </ButtonContainer>
+        <StatsGrid>
+          <StatsCard>
+            <h3>Total de Horas no Mês</h3>
+            <p>{stats.monthlyHours}</p>
+          </StatsCard>
+          
+          <StatsCard>
+            <h3>Média Diária</h3>
+            <p>{stats.dailyAverage}</p>
+          </StatsCard>
+          
+          <StatsCard>
+            <h3>Dias Trabalhados</h3>
+            <p>{stats.workedDays}</p>
+          </StatsCard>
+        </StatsGrid>
 
-        <Grid variants={statsVariants} initial="hidden" animate="visible">
-          <StatCard variants={statItemVariants}>
-            <StatIcon><AiOutlineClockCircle size={24} /></StatIcon>
-            <StatInfo>
-              <StatValue>{monthTotal}</StatValue>
-              <StatLabel>Total de Horas no Mês</StatLabel>
-            </StatInfo>
-          </StatCard>
-
-          <StatCard variants={statItemVariants}>
-            <StatIcon><AiOutlineBarChart size={24} /></StatIcon>
-            <StatInfo>
-              <StatValue>{dailyAverage}</StatValue>
-              <StatLabel>Média Diária</StatLabel>
-            </StatInfo>
-          </StatCard>
-
-          <StatCard variants={statItemVariants}>
-            <StatIcon><AiOutlineCalendar size={24} /></StatIcon>
-            <StatInfo>
-              <StatValue>{workedDays}</StatValue>
-              <StatLabel>Dias Trabalhados</StatLabel>
-            </StatInfo>
-          </StatCard>
-        </Grid>
-
-        <StyledSection>
+        <Section>
           <SectionTitle>Registros Recentes</SectionTitle>
           
-          {/* Visualização Desktop */}
-          <DesktopView>
-            <Table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Entrada</th>
-                  <th>Saída Almoço</th>
-                  <th>Retorno</th>
-                  <th>Saída</th>
-                  <th>Total</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map(record => (
-                  <tr key={record.id}>
-                    <td>{record.date}</td>
-                    <td>{record.entry}</td>
-                    <td>{record.lunchOut}</td>
-                    <td>{record.lunchReturn}</td>
-                    <td>{record.exit}</td>
-                    <td>{record.total}</td>
-                    <td>
-                      <ActionButtons>
-                        <ActionButton onClick={() => handleEdit(record)} color="#2563eb">
-                          <AiOutlineEdit size={16} />
-                        </ActionButton>
-                        <ActionButton onClick={() => handleDelete(record.id)} color="#dc2626">
-                          <AiOutlineDelete size={16} />
-                        </ActionButton>
-                      </ActionButtons>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </DesktopView>
-
-          {/* Visualização Mobile */}
-          <MobileView>
-            <RecordsList>
-              {records.map(record => (
-                <RecordCard key={record.id}>
-                  <RecordHeader>
-                    <RecordDate>{record.date}</RecordDate>
+          {/* Tabela para Desktop */}
+          <Table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Entrada</th>
+                <th>Saída Almoço</th>
+                <th>Retorno Almoço</th>
+                <th>Saída</th>
+                <th>Total</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRecords.map((record: TimeRecord) => (
+                <tr key={record.id}>
+                  <td>{record.displayDate || record.date}</td>
+                  <td>{record.entry || '-'}</td>
+                  <td>{record.lunchOut || '-'}</td>
+                  <td>{record.lunchReturn || '-'}</td>
+                  <td>{record.exit || '-'}</td>
+                  <td>{record.total || '-'}</td>
+                  <td>
                     <ActionButtons>
-                      <ActionButton onClick={() => handleEdit(record)} color="#2563eb">
-                        <AiOutlineEdit size={16} />
-                      </ActionButton>
-                      <ActionButton onClick={() => handleDelete(record.id)} color="#dc2626">
-                        <AiOutlineDelete size={16} />
-                      </ActionButton>
+                      <EditButton onClick={() => setSelectedRecord(record)}>
+                        Editar
+                      </EditButton>
+                      <DeleteButton onClick={() => {
+                        if (window.confirm('Deseja realmente excluir este registro?')) {
+                          deleteRecord(record.id);
+                        }
+                      }}>
+                        Excluir
+                      </DeleteButton>
                     </ActionButtons>
-                  </RecordHeader>
-                  
-                  <RecordTimes>
-                    <TimeItem>
-                      <TimeLabel>Entrada</TimeLabel>
-                      <TimeValue>{record.entry || '-'}</TimeValue>
-                    </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
-                    <TimeItem>
-                      <TimeLabel>Almoço</TimeLabel>
-                      <TimeValue>{record.lunchOut || '-'}</TimeValue>
-                    </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
-                    <TimeItem>
-                      <TimeLabel>Retorno</TimeLabel>
-                      <TimeValue>{record.lunchReturn || '-'}</TimeValue>
-                    </TimeItem>
-                    <TimeSeparator>→</TimeSeparator>
-                    <TimeItem>
-                      <TimeLabel>Saída</TimeLabel>
-                      <TimeValue>{record.exit || '-'}</TimeValue>
-                    </TimeItem>
-                  </RecordTimes>
-                  
-                  <RecordFooter>
-                    <TotalLabel>Total do dia:</TotalLabel>
-                    <TotalValue>{record.total || '-'}</TotalValue>
-                  </RecordFooter>
-                </RecordCard>
+                  </td>
+                </tr>
               ))}
-            </RecordsList>
-          </MobileView>
+            </tbody>
+          </Table>
 
-          {/* Modal de Edição */}
-          {isModalOpen && selectedRecord && (
-            <Modal onClose={() => setIsModalOpen(false)}>
-              <ModalContent>
-                <h2>Editar Registro</h2>
-                {/* Adicione aqui os campos de edição */}
-              </ModalContent>
-            </Modal>
-          )}
-        </StyledSection>
+          {/* Cards para Mobile */}
+          <MobileCards>
+            {sortedRecords.map((record: TimeRecord) => (
+              <Card key={record.id}>
+                <CardRow>
+                  <CardLabel>Data:</CardLabel>
+                  <CardValue>{record.displayDate || record.date}</CardValue>
+                </CardRow>
+                <CardRow>
+                  <CardLabel>Entrada:</CardLabel>
+                  <CardValue>{record.entry || '-'}</CardValue>
+                </CardRow>
+                <CardRow>
+                  <CardLabel>Saída Almoço:</CardLabel>
+                  <CardValue>{record.lunchOut || '-'}</CardValue>
+                </CardRow>
+                <CardRow>
+                  <CardLabel>Retorno Almoço:</CardLabel>
+                  <CardValue>{record.lunchReturn || '-'}</CardValue>
+                </CardRow>
+                <CardRow>
+                  <CardLabel>Saída:</CardLabel>
+                  <CardValue>{record.exit || '-'}</CardValue>
+                </CardRow>
+                <CardRow>
+                  <CardLabel>Total:</CardLabel>
+                  <CardValue>{record.total || '-'}</CardValue>
+                </CardRow>
+                <CardActions>
+                  <EditButton onClick={() => setSelectedRecord(record)}>
+                    Editar
+                  </EditButton>
+                  <DeleteButton onClick={() => {
+                    if (window.confirm('Deseja realmente excluir este registro?')) {
+                      deleteRecord(record.id);
+                    }
+                  }}>
+                    Excluir
+                  </DeleteButton>
+                </CardActions>
+              </Card>
+            ))}
+          </MobileCards>
+        </Section>
+
+        {selectedRecord && (
+          <EditModal
+            record={selectedRecord}
+            onClose={() => setSelectedRecord(null)}
+            onSave={updateRecord}
+          />
+        )}
       </Container>
     </PageTransition>
   );
 };
 
 const Container = styled.div`
-  width: 100%;
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
-  box-sizing: border-box;
-  overflow-x: hidden;
 
   @media (max-width: 768px) {
-    padding: 0.5rem;
-    padding-right: 0.25rem;
-    max-width: 100%;
+    padding: 1rem;
   }
 `;
 
-const Header = styled.div`
-  margin-bottom: 1.5rem;
-  
-  @media (max-width: 768px) {
-    margin-bottom: 1rem;
-  }
+const Header = styled.header`
+  margin-bottom: 2rem;
 `;
 
 const Title = styled.h1`
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #111111;
+  font-size: 1.5rem;
+  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
   margin-bottom: 0.5rem;
-  
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
 `;
 
 const Subtitle = styled.p`
-  color: #666666;
-  font-size: 1rem;
+  color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+  font-size: 0.875rem;
+`;
+
+const Section = styled.section`
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 1.25rem;
+  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  margin-bottom: 1.5rem;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
   
   @media (max-width: 768px) {
-    font-size: 0.9rem;
+    display: none; // Esconde a tabela em dispositivos móveis
   }
+  
+  th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid ${APP_CONFIG.COLORS.BORDER};
+  }
+
+  th {
+    font-weight: 500;
+    color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+  }
+
+  td {
+    color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  }
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
 `;
 
 const Grid = styled(motion.div)`
@@ -443,13 +631,6 @@ const StyledSection = styled(motion.section)`
   }
 `;
 
-const SectionTitle = styled.h2`
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #111111;
-  margin-bottom: 1.5rem;
-`;
-
 const TableContainer = styled.div`
   width: 100%;
   overflow-x: auto;
@@ -459,32 +640,6 @@ const TableContainer = styled.div`
     width: 51%;
     margin: 0;
     padding: 0;
-  }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-
-  @media (max-width: 768px) {
-    font-size: 0.9rem;
-  }
-
-  th, td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #eaeaea;
-    white-space: nowrap;
-    
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-      &:first-child {
-        padding-left: 0;
-      }
-      &:last-child {
-        padding-right: 0;
-      }
-    }
   }
 `;
 
@@ -498,11 +653,6 @@ const Input = styled.input`
     outline: none;
     border-color: #111111;
   }
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.25rem;
 `;
 
 const ActionButton = styled.button<{ color: string }>`
@@ -642,14 +792,48 @@ const TotalValue = styled.span`
   font-size: 0.8rem;
 `;
 
-const ModalContent = styled.div`
-  padding: 1.5rem;
+const MobileCards = styled.div`
+  display: none;
   
-  h2 {
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-    font-weight: 600;
+  @media (max-width: 768px) {
+    display: block;
   }
+`;
+
+const Card = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const CardRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid ${APP_CONFIG.COLORS.BORDER};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const CardLabel = styled.span`
+  color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
+  font-size: 0.875rem;
+`;
+
+const CardValue = styled.span`
+  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  font-weight: 500;
+`;
+
+const CardActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  justify-content: flex-end;
 `;
 
 export default Analytics;
