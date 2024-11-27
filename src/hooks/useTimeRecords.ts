@@ -218,22 +218,29 @@ export const useTimeRecords = () => {
     const today = new Date().toISOString().split('T')[0];
     const todayRecord = records.find(record => record.date === today);
     
-    // Total de hoje
+    // Total de hoje - só calcula se tiver registro completo
     const todayTotal = todayRecord?.total || '0h 0min';
     
-    // Total da semana
+    // Total da semana - considera apenas registros completos
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     const weekRecords = records.filter(record => {
       const recordDate = new Date(record.date);
-      return recordDate >= weekStart;
+      return recordDate >= weekStart && record.total; // Só considera registros com total calculado
     });
     
     const weekMinutes = weekRecords.reduce((total, record) => {
       if (!record.total) return total;
-      const [hours, minutesStr] = record.total.split('h ');
-      const minutes = parseInt(minutesStr.replace('min', ''));
-      return total + (parseInt(hours) * 60) + minutes;
+      
+      // Tratamento seguro para registros sem total
+      try {
+        const [hours, minutesStr] = record.total.split('h ');
+        const minutes = parseInt(minutesStr?.replace('min', '') || '0');
+        return total + (parseInt(hours || '0') * 60) + (minutes || 0);
+      } catch (error) {
+        console.warn('Registro com formato inválido:', record);
+        return total;
+      }
     }, 0);
     
     const weekTotal = `${Math.floor(weekMinutes/60)}h ${weekMinutes%60}min`;
@@ -243,15 +250,22 @@ export const useTimeRecords = () => {
     const workSchedule = userSettings.data()?.expectedDailyHours || '08:48';
     const dailyMinutes = parseTimeToMinutes(workSchedule);
     
-    // Banco de horas
-    const workDays = records.length;
+    // Banco de horas - considera apenas registros completos
+    const completedRecords = records.filter(record => record.total);
+    const workDays = completedRecords.length;
     const expectedMinutes = workDays * dailyMinutes;
     
-    const totalMinutesWorked = records.reduce((total, record) => {
+    const totalMinutesWorked = completedRecords.reduce((total, record) => {
       if (!record.total) return total;
-      const [hours, minutesStr] = record.total.split('h ');
-      const minutes = parseInt(minutesStr.replace('min', ''));
-      return total + (parseInt(hours) * 60) + minutes;
+      
+      try {
+        const [hours, minutesStr] = record.total.split('h ');
+        const minutes = parseInt(minutesStr?.replace('min', '') || '0');
+        return total + (parseInt(hours || '0') * 60) + (minutes || 0);
+      } catch (error) {
+        console.warn('Registro com formato inválido:', record);
+        return total;
+      }
     }, 0);
     
     const balanceMinutes = totalMinutesWorked - expectedMinutes;
