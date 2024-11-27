@@ -5,21 +5,17 @@ import {
   AiOutlineBarChart, 
   AiOutlineClockCircle,
   AiOutlineCalendar,
-  AiOutlineFile,
-  AiOutlineDownload,
   AiOutlineEdit,
-  AiOutlineClose,
-  AiOutlineSave,
   AiOutlineDelete
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import LoadingSpinner from '../../components/LoadingSpinner/index';
 import { TimeRecord } from '../../types';
-import { APP_CONFIG } from '../../constants/app';
 import { auth } from '../../config/firebase';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 import { Button } from '../../components/Button';
+import Modal from '../../components/Modal/index';
 
 const statsVariants = {
   hidden: { opacity: 0 },
@@ -58,6 +54,8 @@ const Analytics = () => {
   const { schedule } = useWorkSchedule();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Omit<TimeRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'> | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
 
   const calculateStats = () => {
     // Calcula total de horas no mês
@@ -93,17 +91,8 @@ const Analytics = () => {
   const { monthTotal, dailyAverage, workedDays } = calculateStats();
 
   const handleEdit = (record: TimeRecord) => {
-    setEditingId(record.id);
-    const editableFields = {
-      date: record.date,
-      displayDate: record.displayDate,
-      entry: record.entry,
-      lunchOut: record.lunchOut,
-      lunchReturn: record.lunchReturn,
-      exit: record.exit,
-      total: record.total
-    };
-    setEditForm(editableFields);
+    setSelectedRecord(record);
+    setIsModalOpen(true);
   };
 
   const handleSave = async () => {
@@ -221,9 +210,11 @@ const Analytics = () => {
           </StatCard>
         </Grid>
 
-        <StyledSection variants={tableVariants} initial="hidden" animate="visible">
+        <StyledSection>
           <SectionTitle>Registros Recentes</SectionTitle>
-          <TableContainer>
+          
+          {/* Visualização Desktop */}
+          <DesktopView>
             <Table>
               <thead>
                 <tr>
@@ -233,67 +224,91 @@ const Analytics = () => {
                   <th>Retorno</th>
                   <th>Saída</th>
                   <th>Total</th>
-                  <th>Saldo</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map(record => (
                   <tr key={record.id}>
-                    {editingId === record.id ? (
-                      // Modo de edição
-                      <>
-                        <td><Input type="date" value={editForm?.date} onChange={e => handleInputChange('date', e.target.value)} /></td>
-                        <td><Input type="time" value={editForm?.entry} onChange={e => handleInputChange('entry', e.target.value)} /></td>
-                        <td><Input type="time" value={editForm?.lunchOut} onChange={e => handleInputChange('lunchOut', e.target.value)} /></td>
-                        <td><Input type="time" value={editForm?.lunchReturn} onChange={e => handleInputChange('lunchReturn', e.target.value)} /></td>
-                        <td><Input type="time" value={editForm?.exit} onChange={e => handleInputChange('exit', e.target.value)} /></td>
-                        <td>{editForm?.total}</td>
-                        <td style={{ 
-                          color: editForm?.total ? calculateDailyBalance(editForm, schedule.expectedDailyHours).startsWith('+') 
-                            ? 'green' 
-                            : 'red' 
-                          : 'inherit'
-                        }}>
-                          {editForm?.total ? calculateDailyBalance(editForm, schedule.expectedDailyHours) : '-'}
-                        </td>
-                        <td>
-                          <ActionButtons>
-                            <ActionButton color="#10B981" onClick={handleSave}><AiOutlineSave /></ActionButton>
-                            <ActionButton color="#EF4444" onClick={handleCancel}><AiOutlineClose /></ActionButton>
-                          </ActionButtons>
-                        </td>
-                      </>
-                    ) : (
-                      // Modo de visualização
-                      <>
-                        <td>{record.date}</td>
-                        <td>{record.entry}</td>
-                        <td>{record.lunchOut}</td>
-                        <td>{record.lunchReturn}</td>
-                        <td>{record.exit}</td>
-                        <td>{record.total}</td>
-                        <td style={{ 
-                          color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
-                            ? 'green' 
-                            : 'red' 
-                          : 'inherit'
-                        }}>
-                          {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
-                        </td>
-                        <td>
-                          <ActionButtons>
-                            <ActionButton color="#111111" onClick={() => handleEdit(record)}><AiOutlineEdit /></ActionButton>
-                            <ActionButton color="#EF4444" onClick={() => handleDelete(record.id)}><AiOutlineDelete /></ActionButton>
-                          </ActionButtons>
-                        </td>
-                      </>
-                    )}
+                    <td>{record.date}</td>
+                    <td>{record.entry}</td>
+                    <td>{record.lunchOut}</td>
+                    <td>{record.lunchReturn}</td>
+                    <td>{record.exit}</td>
+                    <td>{record.total}</td>
+                    <td>
+                      <ActionButtons>
+                        <ActionButton onClick={() => handleEdit(record)} color="#2563eb">
+                          <AiOutlineEdit size={16} />
+                        </ActionButton>
+                        <ActionButton onClick={() => handleDelete(record.id)} color="#dc2626">
+                          <AiOutlineDelete size={16} />
+                        </ActionButton>
+                      </ActionButtons>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </Table>
-          </TableContainer>
+          </DesktopView>
+
+          {/* Visualização Mobile */}
+          <MobileView>
+            <RecordsList>
+              {records.map(record => (
+                <RecordCard key={record.id}>
+                  <RecordHeader>
+                    <RecordDate>{record.date}</RecordDate>
+                    <ActionButtons>
+                      <ActionButton onClick={() => handleEdit(record)} color="#2563eb">
+                        <AiOutlineEdit size={16} />
+                      </ActionButton>
+                      <ActionButton onClick={() => handleDelete(record.id)} color="#dc2626">
+                        <AiOutlineDelete size={16} />
+                      </ActionButton>
+                    </ActionButtons>
+                  </RecordHeader>
+                  
+                  <RecordTimes>
+                    <TimeItem>
+                      <TimeLabel>Entrada</TimeLabel>
+                      <TimeValue>{record.entry || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Almoço</TimeLabel>
+                      <TimeValue>{record.lunchOut || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Retorno</TimeLabel>
+                      <TimeValue>{record.lunchReturn || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Saída</TimeLabel>
+                      <TimeValue>{record.exit || '-'}</TimeValue>
+                    </TimeItem>
+                  </RecordTimes>
+                  
+                  <RecordFooter>
+                    <TotalLabel>Total do dia:</TotalLabel>
+                    <TotalValue>{record.total || '-'}</TotalValue>
+                  </RecordFooter>
+                </RecordCard>
+              ))}
+            </RecordsList>
+          </MobileView>
+
+          {/* Modal de Edição */}
+          {isModalOpen && selectedRecord && (
+            <Modal onClose={() => setIsModalOpen(false)}>
+              <ModalContent>
+                <h2>Editar Registro</h2>
+                {/* Adicione aqui os campos de edição */}
+              </ModalContent>
+            </Modal>
+          )}
         </StyledSection>
       </Container>
     </PageTransition>
@@ -301,13 +316,26 @@ const Analytics = () => {
 };
 
 const Container = styled.div`
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+    padding-right: 0.25rem;
+    max-width: 100%;
+  }
 `;
 
 const Header = styled.div`
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 1rem;
+  }
 `;
 
 const Title = styled.h1`
@@ -315,21 +343,34 @@ const Title = styled.h1`
   font-weight: 700;
   color: #111111;
   margin-bottom: 0.5rem;
+  
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const Subtitle = styled.p`
   color: #666666;
   font-size: 1rem;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const Grid = styled(motion.div)`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    width: calc(100% - 1rem);
+    margin-right: 1rem;
   }
 `;
 
@@ -338,27 +379,51 @@ const StatCard = styled(motion.div)`
   align-items: center;
   gap: 1rem;
   background: white;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
+  height: 100px;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    height: 90px;
+    width: calc(100% - -1rem);
+  }
 `;
 
 const StatIcon = styled.div`
   color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
 `;
 
-const StatInfo = styled.div``;
+const StatInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
 
 const StatValue = styled.div`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #111111;
-  margin-bottom: 0.25rem;
+
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+  }
 `;
 
 const StatLabel = styled.div`
   font-size: 0.9rem;
   color: #666666;
+
+  @media (max-width: 768px) {
+    font-size: 0.85rem;
+  }
 `;
 
 const StyledSection = styled(motion.section)`
@@ -366,7 +431,17 @@ const StyledSection = styled(motion.section)`
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
-  margin-top: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    width: calc(100% - -16rem);
+    margin-right: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
 `;
 
 const SectionTitle = styled.h2`
@@ -377,31 +452,40 @@ const SectionTitle = styled.h2`
 `;
 
 const TableContainer = styled.div`
+  width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  @media (max-width: 768px) {
+    width: 51%;
+    margin: 0;
+    padding: 0;
+  }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
 
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+
   th, td {
     padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #eaeaea;
-  }
-
-  th {
-    font-weight: 500;
-    color: #666666;
-    font-size: 0.9rem;
-  }
-
-  td {
-    color: #111111;
-  }
-
-  tbody tr:hover {
-    background-color: #f9f9f9;
+    white-space: nowrap;
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+      &:first-child {
+        padding-left: 0;
+      }
+      &:last-child {
+        padding-right: 0;
+      }
+    }
   }
 `;
 
@@ -444,6 +528,127 @@ const ButtonContainer = styled.div`
   display: flex;
   gap: 1rem;
   margin: 1rem 0;
+  width: 100%;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: calc(100% - 1rem);
+    margin-right: 1rem;
+    margin: 1rem 0;
+    
+    button {
+      width: 100%;
+    }
+  }
+`;
+
+const DesktopView = styled.div`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const MobileView = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+  }
+`;
+
+const RecordsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 51%;
+`;
+
+const RecordCard = styled.div`
+  background: white;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`;
+
+const RecordHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+`;
+
+const RecordDate = styled.div`
+  font-weight: 600;
+  color: #111111;
+  font-size: 0.9rem;
+`;
+
+const RecordTimes = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const TimeItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: fit-content;
+`;
+
+const TimeLabel = styled.span`
+  font-size: 0.7rem;
+  color: #666666;
+  margin-bottom: 0.1rem;
+`;
+
+const TimeValue = styled.span`
+  font-weight: 500;
+  color: #111111;
+  font-size: 0.8rem;
+`;
+
+const TimeSeparator = styled.span`
+  color: #666666;
+  font-size: 0.7rem;
+`;
+
+const RecordFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+`;
+
+const TotalLabel = styled.span`
+  font-size: 0.8rem;
+  color: #666666;
+`;
+
+const TotalValue = styled.span`
+  font-weight: 600;
+  color: #111111;
+  font-size: 0.8rem;
+`;
+
+const ModalContent = styled.div`
+  padding: 1.5rem;
+  
+  h2 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
 `;
 
 export default Analytics;
