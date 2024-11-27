@@ -139,6 +139,11 @@ const Home = () => {
       : `-${hours}h ${minutes}min`;
   };
 
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   return (
     <PageTransition>
       <Container>
@@ -222,7 +227,7 @@ const Home = () => {
               <tbody>
                 {records.map((record) => (
                   <tr key={record.id}>
-                    <td>{record.date}</td>
+                    <td>{formatDate(record.date)}</td>
                     <td>{record.entry || '-'}</td>
                     <td>{record.lunchOut || '-'}</td>
                     <td>{record.lunchReturn || '-'}</td>
@@ -247,7 +252,7 @@ const Home = () => {
               {records.map((record) => (
                 <RecordCard key={record.id}>
                   <RecordHeader>
-                    <RecordDate>{record.date}</RecordDate>
+                    <RecordDate>{formatDate(record.date)}</RecordDate>
                     <RecordBalance style={{ 
                       color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
                         ? 'green' 
