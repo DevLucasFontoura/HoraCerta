@@ -11,6 +11,7 @@ import {
 import PageTransition from '../../components/PageTransition/index';
 import { APP_CONFIG } from '../../constants/app';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
+import { PageContainer, PageHeader, PageTitle, PageSubtitle, Card } from '../../styles/PageStyles';
 
 interface TimeState {
   hours: string;
@@ -126,99 +127,95 @@ const TimeRecord = () => {
 
   return (
     <PageTransition>
-      <Container>
-        <Header>
-          <Title>Registrar Ponto</Title>
-          <Subtitle>Registre seus horários de trabalho</Subtitle>
-        </Header>
+      <PageContainer>
+        <PageHeader>
+          <PageTitle>Registrar Ponto</PageTitle>
+          <PageSubtitle>Registre sua entrada, almoço ou saída</PageSubtitle>
+        </PageHeader>
 
-        <TimeDisplayCard
-          initial="hidden"
-          animate="visible"
-          variants={timeDisplayVariants}
-        >
-          <TimeValue>
-            {currentTime.hours}:{currentTime.minutes}:{currentTime.seconds}
-          </TimeValue>
-          <TimeDate>
-            {new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </TimeDate>
-        </TimeDisplayCard>
-
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        {success && <SuccessMessage>{success}</SuccessMessage>}
-
-        <ButtonGrid>
-          <TimeButton 
-            onClick={() => handleRegister('entry')} 
-            disabled={loading || !!todayRecord?.entry}
-            $registered={!!todayRecord?.entry}
+        <Card>
+          <TimeDisplayCard
+            initial="hidden"
+            animate="visible"
+            variants={timeDisplayVariants}
           >
-            <ButtonIcon><AiOutlineLogin /></ButtonIcon>
-            <ButtonLabel>Entrada</ButtonLabel>
-          </TimeButton>
+            <TimeValue>
+              {currentTime.hours}:{currentTime.minutes}:{currentTime.seconds}
+            </TimeValue>
+            <TimeDate>
+              {new Date().toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </TimeDate>
+          </TimeDisplayCard>
 
-          <TimeButton 
-            onClick={() => handleRegister('lunchOut')} 
-            disabled={loading || !todayRecord?.entry || !!todayRecord?.lunchOut}
-            $registered={!!todayRecord?.lunchOut}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+          {success && <SuccessMessage>{success}</SuccessMessage>}
+
+          <ButtonGrid>
+            <TimeButton 
+              onClick={() => handleRegister('entry')} 
+              disabled={loading || !!todayRecord?.entry}
+              $registered={!!todayRecord?.entry}
+            >
+              <ButtonIcon><AiOutlineLogin /></ButtonIcon>
+              <ButtonLabel>Entrada</ButtonLabel>
+            </TimeButton>
+
+            <TimeButton 
+              onClick={() => handleRegister('lunchOut')} 
+              disabled={loading || !todayRecord?.entry || !!todayRecord?.lunchOut}
+              $registered={!!todayRecord?.lunchOut}
+            >
+              <ButtonIcon><AiOutlineCoffee /></ButtonIcon>
+              <ButtonLabel>Saída Almoço</ButtonLabel>
+            </TimeButton>
+
+            <TimeButton 
+              onClick={() => handleRegister('lunchReturn')} 
+              disabled={loading || !todayRecord?.lunchOut || !!todayRecord?.lunchReturn}
+              $registered={!!todayRecord?.lunchReturn}
+            >
+              <ButtonIcon><AiOutlineLogin /></ButtonIcon>
+              <ButtonLabel>Retorno Almoço</ButtonLabel>
+            </TimeButton>
+
+            <TimeButton 
+              onClick={() => handleRegister('exit')} 
+              disabled={loading || !todayRecord?.lunchReturn || !!todayRecord?.exit}
+              $registered={!!todayRecord?.exit}
+            >
+              <ButtonIcon><AiOutlineLogout /></ButtonIcon>
+              <ButtonLabel>Saída</ButtonLabel>
+            </TimeButton>
+          </ButtonGrid>
+
+          <HistorySection
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <ButtonIcon><AiOutlineCoffee /></ButtonIcon>
-            <ButtonLabel>Saída Almoço</ButtonLabel>
-          </TimeButton>
-
-          <TimeButton 
-            onClick={() => handleRegister('lunchReturn')} 
-            disabled={loading || !todayRecord?.lunchOut || !!todayRecord?.lunchReturn}
-            $registered={!!todayRecord?.lunchReturn}
-          >
-            <ButtonIcon><AiOutlineLogin /></ButtonIcon>
-            <ButtonLabel>Retorno Almoço</ButtonLabel>
-          </TimeButton>
-
-          <TimeButton 
-            onClick={() => handleRegister('exit')} 
-            disabled={loading || !todayRecord?.lunchReturn || !!todayRecord?.exit}
-            $registered={!!todayRecord?.exit}
-          >
-            <ButtonIcon><AiOutlineLogout /></ButtonIcon>
-            <ButtonLabel>Saída</ButtonLabel>
-          </TimeButton>
-        </ButtonGrid>
-
-        <HistorySection
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <HistoryTitle>Histórico de Hoje</HistoryTitle>
-          <TimelineContainer>
-            <TimelineWrapper>
-              {timelineItems.map((item, index) => (
-                <TimelineItem key={item.type}>
-                  <TimelineTime>{item.time}</TimelineTime>
-                  <TimelineDot />
-                  <TimelineLabel>{item.label}</TimelineLabel>
-                </TimelineItem>
-              ))}
-            </TimelineWrapper>
-          </TimelineContainer>
-        </HistorySection>
-      </Container>
+            <HistoryTitle>Histórico de Hoje</HistoryTitle>
+            <TimelineContainer>
+              <TimelineWrapper>
+                {timelineItems.map((item, index) => (
+                  <TimelineItem key={item.type}>
+                    <TimelineTime>{item.time}</TimelineTime>
+                    <TimelineDot />
+                    <TimelineLabel>{item.label}</TimelineLabel>
+                  </TimelineItem>
+                ))}
+              </TimelineWrapper>
+            </TimelineContainer>
+          </HistorySection>
+        </Card>
+      </PageContainer>
     </PageTransition>
   );
 };
-
-const Container = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-`;
 
 const TimeDisplayCard = styled(motion.div)`
   background: white;

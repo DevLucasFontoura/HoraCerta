@@ -37,12 +37,18 @@ const Layout = () => {
   ];
 
   return (
-    <LayoutWrapper
-      variants={layoutVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <Sidebar>
+    <LayoutWrapper>
+      <MobileHeader>
+        <MenuButton onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <AiOutlineMenu size={24} />
+        </MenuButton>
+        <MobileLogo>
+          <AiOutlineClockCircle size={20} />
+          <span>HoraCerta</span>
+        </MobileLogo>
+      </MobileHeader>
+
+      <Sidebar $isOpen={isMobileMenuOpen}>
         <LogoContainer>
           <AiOutlineClockCircle size={24} />
           <span>HoraCerta</span>
@@ -53,7 +59,8 @@ const Layout = () => {
             <NavItem
               key={item.path}
               to={item.path}
-              active={location.pathname === item.path}
+              onClick={() => setIsMobileMenuOpen(false)}
+              $active={location.pathname === item.path}
             >
               {item.icon}
               <span>{item.label}</span>
@@ -67,25 +74,8 @@ const Layout = () => {
         </LogoutButton>
       </Sidebar>
 
-      <MobileHeader>
-        <MenuButton onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          <AiOutlineMenu size={24} />
-        </MenuButton>
-        <MobileLogo>
-          <AiOutlineClockCircle size={24} />
-          <span>TimeTrack</span>
-        </MobileLogo>
-      </MobileHeader>
-
       {isMobileMenuOpen && (
-        <MobileMenu
-          initial={{ x: '-100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '-100%' }}
-          transition={{ type: 'tween' }}
-        >
-          {/* Mobile menu content */}
-        </MobileMenu>
+        <Overlay onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
       <Main>
@@ -95,13 +85,14 @@ const Layout = () => {
   );
 };
 
-const LayoutWrapper = styled(motion.div)`
+const LayoutWrapper = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: #fafafa;
+  position: relative;
 `;
 
-const Sidebar = styled.aside`
+const Sidebar = styled.aside<{ $isOpen: boolean }>`
   width: 240px;
   background: white;
   border-right: 1px solid #eaeaea;
@@ -110,9 +101,13 @@ const Sidebar = styled.aside`
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  z-index: 1000;
+  transition: transform 0.3s ease;
 
   @media (max-width: 768px) {
-    display: none;
+    transform: translateX(${props => props.$isOpen ? '0' : '-100%'});
+    width: 80%;
+    max-width: 300px;
   }
 `;
 
@@ -133,14 +128,14 @@ const Nav = styled.nav`
   flex: 1;
 `;
 
-const NavItem = styled(Link)<{ active?: boolean }>`
+const NavItem = styled(Link)<{ $active?: boolean }>`
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
   text-decoration: none;
-  color: ${props => props.active ? '#111111' : '#666666'};
-  background: ${props => props.active ? '#f5f5f5' : 'transparent'};
+  color: ${props => props.$active ? '#111111' : '#666666'};
+  background: ${props => props.$active ? '#f5f5f5' : 'transparent'};
   border-radius: 6px;
   transition: all 0.2s ease;
 
@@ -151,7 +146,7 @@ const NavItem = styled(Link)<{ active?: boolean }>`
 
   span {
     font-size: 0.9rem;
-    font-weight: ${props => props.active ? '500' : '400'};
+    font-weight: ${props => props.$active ? '500' : '400'};
   }
 `;
 
@@ -184,7 +179,8 @@ const Main = styled.main`
 
   @media (max-width: 768px) {
     margin-left: 0;
-    padding-top: 4rem;
+    padding: 1rem;
+    padding-top: calc(60px + 1rem);
   }
 `;
 
@@ -194,15 +190,16 @@ const MobileHeader = styled.header`
   top: 0;
   left: 0;
   right: 0;
-  padding: 1rem;
+  height: 60px;
   background: white;
+  padding: 0 1rem;
   border-bottom: 1px solid #eaeaea;
-  z-index: 100;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 900;
 
   @media (max-width: 768px) {
     display: flex;
-    align-items: center;
-    gap: 1rem;
   }
 `;
 
@@ -223,16 +220,19 @@ const MobileLogo = styled.div`
   color: #111111;
 `;
 
-const MobileMenu = styled(motion.div)`
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 80%;
-  max-width: 300px;
-  background: white;
-  z-index: 200;
-  padding: 1rem;
+const Overlay = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 900;
+  }
 `;
 
 export default Layout;

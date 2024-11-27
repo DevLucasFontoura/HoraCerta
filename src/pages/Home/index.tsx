@@ -14,6 +14,7 @@ import {
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TimeRecord {
   id: number;
@@ -58,23 +59,39 @@ const tableVariants = {
 };
 
 const Home = () => {
+  const { currentUser } = useAuth();
   const { records, calculateDashboardStats } = useTimeRecords();
   const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
     weekTotal: '0h',
-    hoursBalance: '0h'
+    hoursBalance: '0h',
+    lastUpdate: ''
   });
+
+  const firstName = currentUser?.displayName?.split(' ')[0] || 'usuário';
 
   useEffect(() => {
     const fetchStats = async () => {
       const result = await calculateDashboardStats();
-      setStats(result);
+      const currentTime = new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      setStats({
+        ...result,
+        lastUpdate: currentTime
+      });
     };
     fetchStats();
   }, [calculateDashboardStats]);
 
   const [dateFilter, setDateFilter] = useState('');
+
+  const formatWorkload = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    return `${hours}h${minutes !== '00' ? ` ${minutes}min` : ''}`;
+  };
 
   const homeCards: DashboardCard[] = [
     {
@@ -82,7 +99,7 @@ const Home = () => {
       icon: <AiOutlineClockCircle size={24} />,
       title: 'Hoje',
       value: stats.todayTotal,
-      footer: 'Meta diária: 8h'
+      footer: `Meta diária: ${formatWorkload(schedule.expectedDailyHours)}`
     },
     {
       id: 'week',
@@ -96,7 +113,7 @@ const Home = () => {
       icon: <AiOutlineCheck size={24} />,
       title: 'Banco de Horas',
       value: stats.hoursBalance,
-      footer: 'Atualizado hoje às ' + new Date().toLocaleTimeString('pt-BR')
+      footer: `Atualizado às ${stats.lastUpdate}`
     }
   ];
 
@@ -125,12 +142,8 @@ const Home = () => {
   return (
     <PageTransition>
       <Container>
-        <Header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Title>Bem-vindo de volta</Title>
+        <Header>
+          <Title>Bem-vindo de volta, {firstName}</Title>
           <Subtitle>{new Date().toLocaleDateString('pt-BR', { 
             weekday: 'long', 
             year: 'numeric', 
@@ -139,9 +152,9 @@ const Home = () => {
           })}</Subtitle>
         </Header>
 
-        <Grid>
+        <StatsGrid>
           {homeCards.map((card, i) => (
-            <Card
+            <StatsCard
               key={card.id}
               custom={i}
               variants={cardVariants}
@@ -154,9 +167,9 @@ const Home = () => {
               </CardHeader>
               <CardValue>{card.value}</CardValue>
               <CardFooter>{card.footer}</CardFooter>
-            </Card>
+            </StatsCard>
           ))}
-        </Grid>
+        </StatsGrid>
 
         <Section
           initial={{ opacity: 0, y: 20 }}
@@ -222,12 +235,24 @@ const Home = () => {
 };
 
 const Container = styled.div`
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+    overflow-x: hidden;
+  }
 `;
 
 const Header = styled(motion.header)`
   margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const Title = styled.h1`
@@ -242,18 +267,40 @@ const Subtitle = styled.p`
   font-size: 1rem;
 `;
 
-const Grid = styled.div`
+const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 0 0 1rem 0;
+    width: 100%;
+  }
 `;
 
-const Card = styled(motion.div)`
+const StatsCard = styled(motion.div)`
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 1.25rem;
+    margin: 0;
+    width: 100%;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
 `;
 
 const CardHeader = styled.div`
@@ -278,11 +325,19 @@ const CardValue = styled.div`
   font-weight: 600;
   color: #111111;
   margin-bottom: 0.5rem;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const CardFooter = styled.div`
   font-size: 0.9rem;
   color: #666666;
+
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+  }
 `;
 
 const Section = styled(motion.section)`
@@ -290,6 +345,14 @@ const Section = styled(motion.section)`
   padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 8px;
+  }
 `;
 
 const SectionHeader = styled.div`
@@ -297,6 +360,11 @@ const SectionHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    padding: 0;
+    margin-bottom: 1rem;
+  }
 `;
 
 const SectionTitle = styled.h2`
@@ -310,18 +378,20 @@ const FilterContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const FilterInput = styled.input`
-  width: 100%;
   padding: 0.5rem;
   border: 1px solid #eaeaea;
   border-radius: 4px;
   font-size: 0.9rem;
-
-  &:focus {
-    outline: none;
-    border-color: #111111;
+  
+  @media (max-width: 768px) {
+    width: 100%;
   }
 `;
 
@@ -343,10 +413,15 @@ const ExportButton = styled.button`
 `;
 
 const TableContainer = styled.div`
+  width: 100%;
   overflow-x: auto;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #eaeaea;
+  -webkit-overflow-scrolling: touch;
+  
+  @media (max-width: 768px) {
+    width: calc(100vw - 1rem);
+    margin-left: -1rem;
+    padding: 0 1rem;
+  }
 `;
 
 const Table = styled.table`
@@ -357,29 +432,12 @@ const Table = styled.table`
     padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #eaeaea;
-  }
-
-  th {
-    font-weight: 500;
-    color: #666666;
-    font-size: 0.9rem;
-  }
-
-  td {
-    color: #111111;
-    font-variant-numeric: tabular-nums;
-  }
-
-  tbody tr:hover {
-    background-color: #f9f9f9;
-  }
-
-  .positive {
-    color: #10B981;
-  }
-
-  .negative {
-    color: #EF4444;
+    white-space: nowrap;
+    
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
   }
 `;
 

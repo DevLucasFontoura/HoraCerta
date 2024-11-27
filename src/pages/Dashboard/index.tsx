@@ -166,7 +166,7 @@ const Dashboard = () => {
 
           <ChartCard>
             <ChartTitle>Comparativo Mensal</ChartTitle>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" minHeight={300}>
               <BarChart data={graphData.monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
@@ -180,7 +180,7 @@ const Dashboard = () => {
 
           <ChartCard>
             <ChartTitle>Horas Trabalhadas na Semana</ChartTitle>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" minHeight={300}>
               <AreaChart data={graphData.weekData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
@@ -201,31 +201,51 @@ const Dashboard = () => {
   );
 };
 
-// Estilos mantendo o padrão do seu projeto
+// Estilos atualizados
 const Container = styled.div`
-  padding: 2rem;
+  padding: 1rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+  }
 `;
 
 const Header = styled.div`
   margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+  }
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
+  font-size: 1.75rem;
+  
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const Subtitle = styled.p`
   color: ${APP_CONFIG.COLORS.TEXT.SECONDARY};
-  margin-top: 0.5rem;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const ChartsContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-top: 2rem;
+  
+  @media (max-width: 768px) {
+    gap: 1rem;
+  }
 `;
 
 const ChartCard = styled.div`
@@ -234,6 +254,11 @@ const ChartCard = styled.div`
   border-radius: 8px;
   border: 1px solid ${APP_CONFIG.COLORS.BORDER};
   width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 6px;
+  }
 `;
 
 const ChartTitle = styled.h2`
@@ -241,37 +266,60 @@ const ChartTitle = styled.h2`
   font-weight: 600;
   color: ${APP_CONFIG.COLORS.TEXT.PRIMARY};
   margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
 `;
 
 const HabitKitContainer = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  border: 1px solid ${APP_CONFIG.COLORS.BORDER};
-  padding: 1.5rem;
+  overflow-x: auto;
+  padding: 0.5rem;
   margin: 0 auto;
-  width: 100%;
+  
+  @media (max-width: 768px) {
+    padding: 0.25rem;
+  }
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${APP_CONFIG.COLORS.BORDER};
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${SOFT_BLACK};
+    border-radius: 3px;
+  }
 `;
 
 const HabitGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(30, 1fr);
-  gap: 4px;
+  gap: 2px;
   width: 100%;
-  aspect-ratio: 3/1;
-  padding: 0.5rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(15, 1fr); // Menos colunas em telas menores
+    gap: 1px;
+  }
 `;
 
 const HabitCell = styled.div<{ registered: boolean }>`
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: 2px;
   background-color: ${({ registered }) => 
     registered ? SOFT_BLACK : APP_CONFIG.COLORS.BORDER};
   opacity: ${({ registered }) => registered ? 1 : 0.3};
   transition: all 0.2s ease;
 
-  &:hover {
-    transform: scale(1.2);
+  @media (max-width: 768px) {
+    border-radius: 1px;
   }
 `;
 
