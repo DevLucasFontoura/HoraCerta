@@ -171,11 +171,7 @@ const Home = () => {
           ))}
         </StatsGrid>
 
-        <Section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <Section>
           <SectionHeader>
             <div>
               <SectionTitle>Histórico Detalhado</SectionTitle>
@@ -193,41 +189,50 @@ const Home = () => {
             </ExportButton>
           </SectionHeader>
 
-          <TableContainer>
-            <Table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Entrada</th>
-                  <th>Saída Almoço</th>
-                  <th>Retorno Almoço</th>
-                  <th>Saída</th>
-                  <th>Total</th>
-                  <th>Saldo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((record) => (
-                  <tr key={record.id}>
-                    <td>{record.date}</td>
-                    <td>{record.entry}</td>
-                    <td>{record.lunchOut}</td>
-                    <td>{record.lunchReturn}</td>
-                    <td>{record.exit}</td>
-                    <td>{record.total}</td>
-                    <td style={{ 
-                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
-                        ? 'green' 
-                        : 'red' 
+          <RecordsList>
+            {records.map((record) => (
+              <RecordCard key={record.id}>
+                <RecordHeader>
+                  <RecordDate>{record.date}</RecordDate>
+                  <RecordBalance style={{ 
+                    color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                      ? 'green' 
+                      : 'red' 
                       : 'inherit'
-                    }}>
-                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableContainer>
+                  }}>
+                    {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                  </RecordBalance>
+                </RecordHeader>
+                
+                <RecordTimes>
+                  <TimeItem>
+                    <TimeLabel>Entrada</TimeLabel>
+                    <TimeValue>{record.entry || '-'}</TimeValue>
+                  </TimeItem>
+                  <TimeSeparator>→</TimeSeparator>
+                  <TimeItem>
+                    <TimeLabel>Almoço</TimeLabel>
+                    <TimeValue>{record.lunchOut || '-'}</TimeValue>
+                  </TimeItem>
+                  <TimeSeparator>→</TimeSeparator>
+                  <TimeItem>
+                    <TimeLabel>Retorno</TimeLabel>
+                    <TimeValue>{record.lunchReturn || '-'}</TimeValue>
+                  </TimeItem>
+                  <TimeSeparator>→</TimeSeparator>
+                  <TimeItem>
+                    <TimeLabel>Saída</TimeLabel>
+                    <TimeValue>{record.exit || '-'}</TimeValue>
+                  </TimeItem>
+                </RecordTimes>
+                
+                <RecordFooter>
+                  <TotalLabel>Total do dia:</TotalLabel>
+                  <TotalValue>{record.total || '-'}</TotalValue>
+                </RecordFooter>
+              </RecordCard>
+            ))}
+          </RecordsList>
         </Section>
       </Container>
     </PageTransition>
@@ -244,6 +249,7 @@ const Container = styled.div`
   @media (max-width: 768px) {
     padding: 0.5rem;
     overflow-x: hidden;
+    max-width: 100vw;
   }
 `;
 
@@ -342,7 +348,7 @@ const CardFooter = styled.div`
 
 const Section = styled(motion.section)`
   background: white;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 8px;
   border: 1px solid #eaeaea;
   width: 100%;
@@ -350,8 +356,10 @@ const Section = styled(motion.section)`
 
   @media (max-width: 768px) {
     padding: 1rem;
-    margin: 0;
+    width: calc(100% - 0.25rem);
+    margin-left: 0;
     border-radius: 8px;
+    margin-top: 1rem;
   }
 `;
 
@@ -359,11 +367,12 @@ const SectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   
   @media (max-width: 768px) {
-    padding: 0;
-    margin-bottom: 1rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
 `;
 
@@ -371,13 +380,18 @@ const SectionTitle = styled.h2`
   font-size: 1.2rem;
   font-weight: 600;
   color: #111111;
-  margin-bottom: 1.5rem;
+  margin: 0;
+  
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
 `;
 
 const FilterContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   
   @media (max-width: 768px) {
     width: 100%;
@@ -392,12 +406,14 @@ const FilterInput = styled.input`
   
   @media (max-width: 768px) {
     width: 100%;
+    box-sizing: border-box;
   }
 `;
 
 const ExportButton = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem;
   border: none;
@@ -405,40 +421,105 @@ const ExportButton = styled.button`
   background: #10B981;
   color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
+  width: 100%;
+  font-size: 0.9rem;
 
   &:hover {
-    background: #158057;
+    background: #059669;
   }
 `;
 
-const TableContainer = styled.div`
-  width: 100%;
+const RecordsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const RecordCard = styled.div`
+  background: white;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  padding: 0.5rem;
+`;
+
+const RecordHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+`;
+
+const RecordDate = styled.div`
+  font-weight: 600;
+  color: #111111;
+  font-size: 0.9rem;
+`;
+
+const RecordBalance = styled.div`
+  font-weight: 500;
+  font-size: 0.85rem;
+`;
+
+const RecordTimes = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  margin: 0.25rem 0;
   
-  @media (max-width: 768px) {
-    width: calc(100vw - 1rem);
-    margin-left: -1rem;
-    padding: 0 1rem;
+  &::-webkit-scrollbar {
+    display: none;
   }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 `;
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
+const TimeItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: fit-content;
+`;
 
-  th, td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #eaeaea;
-    white-space: nowrap;
-    
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-    }
-  }
+const TimeLabel = styled.span`
+  font-size: 0.7rem;
+  color: #666666;
+  margin-bottom: 0.1rem;
+`;
+
+const TimeValue = styled.span`
+  font-weight: 500;
+  color: #111111;
+  font-size: 0.8rem;
+`;
+
+const TimeSeparator = styled.span`
+  color: #666666;
+  font-size: 0.7rem;
+  margin: 0 0.1rem;
+`;
+
+const RecordFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #eaeaea;
+  font-size: 0.8rem;
+`;
+
+const TotalLabel = styled.span`
+  font-size: 0.85rem;
+  color: #666666;
+`;
+
+const TotalValue = styled.span`
+  font-weight: 600;
+  color: #111111;
+  font-size: 0.85rem;
 `;
 
 export default Home;
