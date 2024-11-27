@@ -173,7 +173,7 @@ const Home = () => {
 
         <Section>
           <SectionHeader>
-            <div>
+            <DesktopHeader>
               <SectionTitle>Histórico Detalhado</SectionTitle>
               <FilterContainer>
                 <FilterInput
@@ -182,57 +182,112 @@ const Home = () => {
                   onChange={(e) => setDateFilter(e.target.value)}
                 />
               </FilterContainer>
-            </div>
-            <ExportButton onClick={handleExport}>
+            </DesktopHeader>
+            <ExportButton onClick={handleExport} className="desktop-button">
               <AiOutlineDownload size={20} />
-              Exportar Relatório
+              <span>Exportar Relatório</span>
             </ExportButton>
+
+            <MobileHeader>
+              <TitleContainer>
+                <SectionTitle>Histórico Detalhado</SectionTitle>
+                <ExportButton onClick={handleExport} className="mobile-button">
+                  <AiOutlineDownload size={20} />
+                  <span>Exportar Relatório</span>
+                </ExportButton>
+              </TitleContainer>
+              <FilterContainer>
+                <FilterInput
+                  type="month"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </FilterContainer>
+            </MobileHeader>
           </SectionHeader>
 
-          <RecordsList>
-            {records.map((record) => (
-              <RecordCard key={record.id}>
-                <RecordHeader>
-                  <RecordDate>{record.date}</RecordDate>
-                  <RecordBalance style={{ 
-                    color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
-                      ? 'green' 
-                      : 'red' 
-                      : 'inherit'
-                  }}>
-                    {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
-                  </RecordBalance>
-                </RecordHeader>
-                
-                <RecordTimes>
-                  <TimeItem>
-                    <TimeLabel>Entrada</TimeLabel>
-                    <TimeValue>{record.entry || '-'}</TimeValue>
-                  </TimeItem>
-                  <TimeSeparator>→</TimeSeparator>
-                  <TimeItem>
-                    <TimeLabel>Almoço</TimeLabel>
-                    <TimeValue>{record.lunchOut || '-'}</TimeValue>
-                  </TimeItem>
-                  <TimeSeparator>→</TimeSeparator>
-                  <TimeItem>
-                    <TimeLabel>Retorno</TimeLabel>
-                    <TimeValue>{record.lunchReturn || '-'}</TimeValue>
-                  </TimeItem>
-                  <TimeSeparator>→</TimeSeparator>
-                  <TimeItem>
-                    <TimeLabel>Saída</TimeLabel>
-                    <TimeValue>{record.exit || '-'}</TimeValue>
-                  </TimeItem>
-                </RecordTimes>
-                
-                <RecordFooter>
-                  <TotalLabel>Total do dia:</TotalLabel>
-                  <TotalValue>{record.total || '-'}</TotalValue>
-                </RecordFooter>
-              </RecordCard>
-            ))}
-          </RecordsList>
+          <DesktopView>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Entrada</th>
+                  <th>Saída Almoço</th>
+                  <th>Retorno</th>
+                  <th>Saída</th>
+                  <th>Total</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record) => (
+                  <tr key={record.id}>
+                    <td>{record.date}</td>
+                    <td>{record.entry || '-'}</td>
+                    <td>{record.lunchOut || '-'}</td>
+                    <td>{record.lunchReturn || '-'}</td>
+                    <td>{record.exit || '-'}</td>
+                    <td>{record.total || '-'}</td>
+                    <td style={{ 
+                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                        ? 'green' 
+                        : 'red' 
+                        : 'inherit'
+                    }}>
+                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </DesktopView>
+
+          <MobileView>
+            <RecordsList>
+              {records.map((record) => (
+                <RecordCard key={record.id}>
+                  <RecordHeader>
+                    <RecordDate>{record.date}</RecordDate>
+                    <RecordBalance style={{ 
+                      color: record.total ? calculateDailyBalance(record, schedule.expectedDailyHours).startsWith('+') 
+                        ? 'green' 
+                        : 'red' 
+                        : 'inherit'
+                    }}>
+                      {record.total ? calculateDailyBalance(record, schedule.expectedDailyHours) : '-'}
+                    </RecordBalance>
+                  </RecordHeader>
+                  
+                  <RecordTimes>
+                    <TimeItem>
+                      <TimeLabel>Entrada</TimeLabel>
+                      <TimeValue>{record.entry || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Almoço</TimeLabel>
+                      <TimeValue>{record.lunchOut || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Retorno</TimeLabel>
+                      <TimeValue>{record.lunchReturn || '-'}</TimeValue>
+                    </TimeItem>
+                    <TimeSeparator>→</TimeSeparator>
+                    <TimeItem>
+                      <TimeLabel>Saída</TimeLabel>
+                      <TimeValue>{record.exit || '-'}</TimeValue>
+                    </TimeItem>
+                  </RecordTimes>
+                  
+                  <RecordFooter>
+                    <TotalLabel>Total do dia:</TotalLabel>
+                    <TotalValue>{record.total || '-'}</TotalValue>
+                  </RecordFooter>
+                </RecordCard>
+              ))}
+            </RecordsList>
+          </MobileView>
         </Section>
       </Container>
     </PageTransition>
@@ -366,13 +421,34 @@ const Section = styled(motion.section)`
 const SectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1rem;
   
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: 1rem;
+  }
+`;
+
+const TitleContainer = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+`;
+
+const DesktopHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    display: none;
   }
 `;
 
@@ -381,10 +457,49 @@ const SectionTitle = styled.h2`
   font-weight: 600;
   color: #111111;
   margin: 0;
+  margin-bottom: 1rem;
   
   @media (max-width: 768px) {
     font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
+  }
+`;
+
+const ExportButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: #10B981;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  white-space: nowrap;
+
+  &.mobile-button {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    &.desktop-button {
+      display: none;
+    }
+
+    &.mobile-button {
+      display: flex;
+      padding: 0.5rem;
+      
+      span {
+        display: none;
+      }
+    }
+  }
+
+  &:hover {
+    background: #059669;
   }
 `;
 
@@ -407,25 +522,6 @@ const FilterInput = styled.input`
   @media (max-width: 768px) {
     width: 100%;
     box-sizing: border-box;
-  }
-`;
-
-const ExportButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 4px;
-  background: #10B981;
-  color: white;
-  cursor: pointer;
-  width: 100%;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: #059669;
   }
 `;
 
@@ -520,6 +616,56 @@ const TotalValue = styled.span`
   font-weight: 600;
   color: #111111;
   font-size: 0.85rem;
+`;
+
+const DesktopView = styled.div`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const MobileView = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+
+  th, td {
+    text-align: left;
+    padding: 1rem;
+    border-bottom: 1px solid #eaeaea;
+  }
+
+  th {
+    font-weight: 600;
+    color: #111111;
+    background: #f9fafb;
+  }
+
+  td {
+    color: #374151;
+  }
+
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+`;
+
+const MobileHeader = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
 `;
 
 export default Home;
