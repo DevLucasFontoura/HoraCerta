@@ -16,7 +16,15 @@ const formatDateDisplay = (dateStr: string) => {
 
 export const useTimeRecords = () => {
   const [records, setRecords] = useState<TimeRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const addRecord = async (record: TimeRecord) => {
+    setRecords(prevRecords => [...prevRecords, record]);
+  };
+
+  const clearRecords = async () => {
+    setRecords([]);
+  };
 
   const fetchRecords = async () => {
     const user = auth.currentUser;
@@ -449,6 +457,8 @@ export const useTimeRecords = () => {
     calculateTotalHours,
     calculateDashboardStats,
     calculateGraphData,
-    addTestData
+    addTestData,
+    addRecord,
+    clearRecords
   };
 };

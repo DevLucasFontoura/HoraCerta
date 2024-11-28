@@ -16,53 +16,46 @@ import {
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const { setCurrentUser } = useAuth();
+  const { currentUser, setCurrentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
+  console.log('Firebase auth:', auth);
+  console.log('Firebase auth currentUser:', auth.currentUser);
+
   // Teste do auth
   console.log('Auth inicializado:', auth);
+
+  // Log inicial para verificar se o componente está recebendo o contexto
+  console.log('Estado atual do usuário:', currentUser);
+  console.log('setCurrentUser existe?', !!setCurrentUser);
 
   // Adiciona a função toggleSidebar
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleSignOut = () => {
-    // 1. Log inicial
-    console.log('Iniciando processo de logout...');
-
-    // 2. Verificar contexto de autenticação
-    if (setCurrentUser) {
-      console.log('setCurrentUser está disponível');
-    } else {
-      console.warn('setCurrentUser não está definido');
+  const handleSignOut = async () => {
+    console.log('1. Botão de logout clicado');
+    
+    if (!auth) {
+      console.error('Auth não está inicializado');
+      return;
     }
 
-    // 3. Teste do Firebase
-    signOut(auth)
-      .then(() => {
-        console.log('Firebase: Logout realizado com sucesso');
-        
-        // 4. Atualizar contexto
-        if (setCurrentUser) {
-          setCurrentUser(null);
-          console.log('Contexto: usuário definido como null');
-        }
-
-        // 5. Navegação
-        console.log('Tentando navegar para /login');
-        navigate('/login');
-        console.log('Navegação executada');
-      })
-      .catch((error) => {
-        console.error('Erro durante o logout:', error);
-      });
-  };
-
-  // Teste simples do botão
-  const testClick = () => {
-    console.log('Teste de clique funcionando');
+    try {
+      console.log('2. Iniciando signOut');
+      await signOut(auth);
+      console.log('3. SignOut realizado com sucesso');
+      
+      setCurrentUser(null);
+      console.log('4. Contexto atualizado');
+      
+      navigate('/login');
+      console.log('5. Navegação realizada');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   const menuItems = [
@@ -97,15 +90,7 @@ const Sidebar = () => {
           ))}
         </Nav>
 
-        <LogoutButton 
-          type="button"
-          onClick={() => {
-            console.log('Botão clicado');
-            testClick();
-            handleSignOut();
-          }}
-          style={{ border: '2px solid red' }} // Teste visual temporário
-        >
+        <LogoutButton onClick={handleSignOut}>
           <AiOutlineLogout size={24} />
           <span>Sair</span>
         </LogoutButton>
@@ -201,6 +186,15 @@ const LogoutButton = styled.button`
 
   span {
     font-size: 0.875rem;
+  }
+
+  // Garantir que o botão seja clicável
+  pointer-events: all;
+  user-select: none;
+  
+  // Adicionar um outline temporário para debug visual
+  &:active {
+    outline: 2px solid red;
   }
 `;
 

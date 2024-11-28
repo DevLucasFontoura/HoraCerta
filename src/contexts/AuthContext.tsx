@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = {
     currentUser,
+    setCurrentUser,
     loading
   };
 

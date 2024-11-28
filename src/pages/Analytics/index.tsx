@@ -1,53 +1,11 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { 
-  AiOutlineBarChart, 
-  AiOutlineClockCircle,
-  AiOutlineCalendar,
-  AiOutlineEdit,
-  AiOutlineDelete
-} from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
-import LoadingSpinner from '../../components/LoadingSpinner/index';
 import { TimeRecord } from '../../types';
-import { auth } from '../../config/firebase';
-import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 import { APP_CONFIG } from '../../constants/app';
-import Modal from '../../components/Modal/index';
-
-const statsVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const statItemVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: { 
-    opacity: 1, 
-    x: 0,
-    transition: {
-      type: "spring",
-      duration: 0.5
-    }
-  }
-};
-
-const tableVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
+import { addRecord } from '../../store/slices/timeRecordSlice';
 
 const StyledButton = styled.button`
   padding: 0.5rem 1rem;
@@ -295,7 +253,14 @@ const StatsCard = styled.div`
 `;
 
 const Analytics = () => {
-  const { records, loading, updateRecord, deleteRecord } = useTimeRecords();
+  const { 
+    records, 
+    loading, 
+    updateRecord, 
+    deleteRecord, 
+    addRecord, 
+    clearRecords 
+  } = useTimeRecords();
   const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
   const [stats, setStats] = useState({
     monthlyHours: '0h',
@@ -345,6 +310,45 @@ const Analytics = () => {
       dailyAverage,
       workedDays
     });
+  };
+
+  const addTestData = async () => {
+    const now = new Date();
+    const newRecord: TimeRecord = {
+      id: `test-${Date.now()}`,
+      date: now.toLocaleDateString(),
+      entry: '08:00',
+      lunchOut: '12:00',
+      lunchReturn: '13:00',
+      exit: '17:00',
+      total: '8h 0min',
+      displayDate: now.toLocaleDateString(),
+      userId: 'test-user',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      entryTime: new Date(now.setHours(8, 0, 0, 0)).toISOString(),
+      exitTime: new Date(now.setHours(17, 0, 0, 0)).toISOString(),
+      lunchOutTime: new Date(now.setHours(12, 0, 0, 0)).toISOString(),
+      lunchReturnTime: new Date(now.setHours(13, 0, 0, 0)).toISOString()
+    };
+
+    try {
+      await addRecord(newRecord);
+      console.log('Adicionado um registro de teste');
+    } catch (error) {
+      console.error('Erro ao adicionar registro:', error);
+    }
+  };
+
+  const deleteAllRecords = async () => {
+    if (window.confirm('Tem certeza que deseja excluir todos os registros?')) {
+      try {
+        await clearRecords();
+        console.log('Todos os registros foram deletados');
+      } catch (error) {
+        console.error('Erro ao deletar registros:', error);
+      }
+    }
   };
 
   return (
@@ -847,18 +851,5 @@ const CardActions = styled.div`
   margin-top: 1rem;
   justify-content: flex-end;
 `;
-
-// Funções de teste
-const addTestData = async () => {
-  // Implementar a lógica de adicionar dados de teste
-  console.log('Adicionar dados de teste');
-};
-
-const deleteAllRecords = async () => {
-  if (window.confirm('Tem certeza que deseja excluir todos os registros?')) {
-    // Implementar a lógica de deletar todos os registros
-    console.log('Deletar todos os registros');
-  }
-};
 
 export default Analytics;

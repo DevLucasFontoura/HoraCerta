@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
 import { logout } from '../../store/slices/authSlice';
 import { 
   AiOutlineClockCircle,
@@ -13,15 +12,15 @@ import {
   AiOutlineMenu
 } from 'react-icons/ai';
 
-const layoutVariants = {
-  hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1,
-    transition: {
-      duration: 0.3
-    }
-  }
-};
+// const layoutVariants = {
+//   hidden: { opacity: 0 },
+//   visible: { 
+//     opacity: 1,
+//     transition: {
+//       duration: 0.3
+//     }
+//   }
+// };
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
