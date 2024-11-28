@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,6 +12,7 @@ import PageTransition from '../../components/PageTransition/index';
 import { APP_CONFIG } from '../../constants/app';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { PageContainer, PageHeader, PageTitle, PageSubtitle, Card } from '../../styles/PageStyles';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TimeState {
   hours: string;
@@ -78,7 +79,8 @@ const timelineItemVariants = {
 };
 
 const TimeRecord = () => {
-  const { records, registerTime } = useTimeRecords();
+  const { currentUser } = useAuth();
+  const { records, registerTime } = useTimeRecords(currentUser?.uid || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -89,7 +91,10 @@ const TimeRecord = () => {
   });
 
   const today = new Date().toISOString().split('T')[0];
-  const todayRecord = records.find(record => record.date === today);
+  const todayRecord = useMemo(() => 
+    records.find(record => record.date === today),
+    [records, today]
+  );
 
   const timelineItems = todayRecord ? [
     { time: todayRecord.entry, label: 'Entrada', type: 'entry' },

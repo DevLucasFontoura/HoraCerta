@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { 
@@ -62,7 +62,7 @@ const tableVariants = {
 
 const Home = () => {
   const { currentUser } = useAuth();
-  const { records, calculateDashboardStats } = useTimeRecords();
+  const { records, calculateDashboardStats } = useTimeRecords(currentUser?.uid || '');
   const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
@@ -104,11 +104,21 @@ const Home = () => {
     return recordYear === yearFilter && recordMonth === monthFilter;
   });
 
-  const sortedRecords = [...filteredRecords].sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
-    return dateB.getTime() - dateA.getTime();
-  });
+  const sortedRecords = useMemo(() => {
+    if (!records || records.length === 0) return [];
+    
+    return [...records].sort((a, b) => {
+      try {
+        const dateA = a.date || new Date().toISOString().split('T')[0];
+        const dateB = b.date || new Date().toISOString().split('T')[0];
+        
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      } catch (error) {
+        console.error('Erro ao ordenar:', { a, b, error });
+        return 0;
+      }
+    });
+  }, [records]);
 
   const formatWorkload = (time: string) => {
     const [hours, minutes] = time.split(':');

@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import PageTransition from '../../components/PageTransition/index';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { TimeRecord } from '../../types';
 import { APP_CONFIG } from '../../constants/app';
-import { addRecord } from '../../store/slices/timeRecordSlice';
+import { useAuth } from '../../contexts/AuthContext';
 
 const StyledButton = styled.button`
   padding: 0.5rem 1rem;
@@ -253,14 +253,16 @@ const StatsCard = styled.div`
 `;
 
 const Analytics = () => {
+  const { currentUser } = useAuth();
   const { 
     records, 
     loading, 
+    error, 
     updateRecord, 
     deleteRecord, 
     addRecord, 
     clearRecords 
-  } = useTimeRecords();
+  } = useTimeRecords(currentUser?.uid || '');
   const [selectedRecord, setSelectedRecord] = useState<TimeRecord | null>(null);
   const [stats, setStats] = useState({
     monthlyHours: '0h',
@@ -269,11 +271,28 @@ const Analytics = () => {
   });
 
   // Ordenar registros por data (mais recente primeiro)
-  const sortedRecords = [...records].sort((a, b) => {
-    const dateA = new Date(a.date.split('/').reverse().join('-'));
-    const dateB = new Date(b.date.split('/').reverse().join('-'));
-    return dateB.getTime() - dateA.getTime();
-  });
+  const sortedRecords = useMemo(() => {
+    if (!records || records.length === 0) return [];
+    
+    console.log('Ordenando registros:', records);
+    
+    return [...records].sort((a, b) => {
+      try {
+        // Garantir que as datas são strings no formato YYYY-MM-DD
+        const dateA = a.date || new Date().toISOString().split('T')[0];
+        const dateB = b.date || new Date().toISOString().split('T')[0];
+        
+        // Converter para Date objects
+        const timeA = new Date(dateA).getTime();
+        const timeB = new Date(dateB).getTime();
+        
+        return timeB - timeA;
+      } catch (error) {
+        console.error('Erro ao ordenar:', { a, b, error });
+        return 0;
+      }
+    });
+  }, [records]);
 
   useEffect(() => {
     calculateStats();
@@ -312,29 +331,28 @@ const Analytics = () => {
     });
   };
 
-  const addTestData = async () => {
+  const handleAddTestRecord = async () => {
     const now = new Date();
-    const newRecord: TimeRecord = {
-      id: `test-${Date.now()}`,
-      date: now.toLocaleDateString(),
+    const newRecord: Omit<TimeRecord, 'id'> = {
+      date: now.toISOString().split('T')[0],
       entry: '08:00',
       lunchOut: '12:00',
       lunchReturn: '13:00',
       exit: '17:00',
-      total: '8h 0min',
+      total: '8h',
       displayDate: now.toLocaleDateString(),
-      userId: 'test-user',
+      userId: currentUser?.uid || '',
+      type: 'regular',
+      hours: 8,
+      description: 'Registro de teste',
       createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-      entryTime: new Date(now.setHours(8, 0, 0, 0)).toISOString(),
-      exitTime: new Date(now.setHours(17, 0, 0, 0)).toISOString(),
-      lunchOutTime: new Date(now.setHours(12, 0, 0, 0)).toISOString(),
-      lunchReturnTime: new Date(now.setHours(13, 0, 0, 0)).toISOString()
+      updatedAt: now.toISOString()
     };
 
     try {
+      console.log('Adicionando registro de teste:', newRecord);
       await addRecord(newRecord);
-      console.log('Adicionado um registro de teste');
+      console.log('Registro de teste adicionado com sucesso');
     } catch (error) {
       console.error('Erro ao adicionar registro:', error);
     }
@@ -364,7 +382,7 @@ const Analytics = () => {
           <StyledButton onClick={deleteAllRecords} style={{ background: APP_CONFIG.COLORS.DANGER, color: 'white' }}>
             Resetar Dados de Teste
           </StyledButton>
-          <StyledButton onClick={addTestData} style={{ background: APP_CONFIG.COLORS.SECONDARY, color: 'white' }}>
+          <StyledButton onClick={handleAddTestRecord} style={{ background: APP_CONFIG.COLORS.SECONDARY, color: 'white' }}>
             Adicionar Dados de Teste
           </StyledButton>
         </ButtonContainer>

@@ -1,19 +1,18 @@
 export interface TimeRecord {
     id: string;
-    date: string;
-    entry: string;
-    lunchOut: string;
-    lunchReturn: string;
-    exit: string;
-    total: string;
-    displayDate: string;
     userId: string;
+    date: string;
+    type: string;
+    hours: number;
+    entry?: string;
+    lunchOut?: string;
+    lunchReturn?: string;
+    exit?: string;
+    total?: string;
+    displayDate?: string;
     createdAt: string;
     updatedAt: string;
-    entryTime: string;
-    exitTime: string;
-    lunchOutTime: string;
-    lunchReturnTime: string;
+    description?: string;
   }
   
   export interface WeekData {

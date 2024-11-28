@@ -28,6 +28,7 @@ import { APP_CONFIG } from '../../constants/app';
 import { WeekData, MonthlyData } from '../../types';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Dados iniciais vazios
 const weekData: WeekData[] = [];
@@ -70,7 +71,8 @@ interface GraphData {
 const SOFT_BLACK = '#404040';
 
 const Dashboard = () => {
-  const { calculateDashboardStats, calculateGraphData, records } = useTimeRecords();
+  const { currentUser } = useAuth();
+  const { calculateDashboardStats, calculateGraphData, records } = useTimeRecords(currentUser?.uid || '');
   const { schedule } = useWorkSchedule();
   const [stats, setStats] = useState({
     todayTotal: '0h',
@@ -86,12 +88,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const statsResult = await calculateDashboardStats();
-      const graphResult = calculateGraphData(schedule.expectedDailyHours);
+      const graphResult = calculateGraphData();
       setStats(statsResult);
-      setGraphData(graphResult);
+      setGraphData(graphResult as GraphData);
     };
     fetchData();
-  }, [calculateDashboardStats, calculateGraphData, schedule.expectedDailyHours]);
+  }, [calculateDashboardStats, calculateGraphData]);
 
   const dashboardStats = [
     {

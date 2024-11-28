@@ -16,7 +16,7 @@ import {
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser } = useAuth();
+  const { currentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
@@ -28,31 +28,16 @@ const Sidebar = () => {
 
   // Log inicial para verificar se o componente está recebendo o contexto
   console.log('Estado atual do usuário:', currentUser);
-  console.log('setCurrentUser existe?', !!setCurrentUser);
 
   // Adiciona a função toggleSidebar
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleSignOut = async () => {
-    console.log('1. Botão de logout clicado');
-    
-    if (!auth) {
-      console.error('Auth não está inicializado');
-      return;
-    }
-
+  const handleLogout = async () => {
     try {
-      console.log('2. Iniciando signOut');
       await signOut(auth);
-      console.log('3. SignOut realizado com sucesso');
-      
-      setCurrentUser(null);
-      console.log('4. Contexto atualizado');
-      
       navigate('/login');
-      console.log('5. Navegação realizada');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -90,7 +75,7 @@ const Sidebar = () => {
           ))}
         </Nav>
 
-        <LogoutButton onClick={handleSignOut}>
+        <LogoutButton onClick={handleLogout}>
           <AiOutlineLogout size={24} />
           <span>Sair</span>
         </LogoutButton>
