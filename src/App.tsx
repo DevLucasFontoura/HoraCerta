@@ -11,7 +11,9 @@ import Dashboard from './pages/Dashboard';
 import TimeRecord from './pages/TimeRecord';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
-
+import PricingPage from './pages/PricingPage';
+import HowItWorksPage from './pages/HowItWorksPage';
+import FeaturesPage from './pages/FeaturesPage';
 function App() {
   return (
     <BrowserRouter>
@@ -22,6 +24,9 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/precos" element={<PricingPage />} />
+          <Route path="/comoFunciona" element={<HowItWorksPage />} />
+          <Route path="/recursos" element={<FeaturesPage />} />
 
           {/* Rotas protegidas */}
           <Route element={<Layout />}>
