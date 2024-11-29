@@ -25,14 +25,15 @@ import {
 } from 'react-icons/ai';
 import PageTransition from '../../components/PageTransition';
 import { APP_CONFIG } from '../../constants/app';
-import { WeekData, MonthlyData } from '../../types';
+import { WeekDataPoint, MonthlyDataPoint, DashboardStats, TimeDistribution } from '../../types';
 import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 import { useAuth } from '../../contexts/AuthContext';
+import type { GraphData } from '../../types';
 
 // Dados iniciais vazios
-const weekData: WeekData[] = [];
-const monthlyComparison: MonthlyData[] = [];
+const weekData: WeekDataPoint[] = [];
+const monthlyComparison: MonthlyDataPoint[] = [];
 const timeDistribution = [
   { name: 'Tempo Trabalhado', value: 0 },
   { name: 'Horas Extras', value: 0 },
@@ -50,21 +51,10 @@ const colorMap = {
   info: APP_CONFIG.COLORS.INFO
 } as const;
 
-interface GraphData {
-  weekData: Array<{
-    date: string;
-    hours: number;
-    balance: string;
-  }>;
-  timeDistribution: Array<{
-    name: string;
-    value: number;
-  }>;
-  monthlyData: Array<{
-    month: string;
-    total: number;
-    average: number;
-  }>;
+interface DashboardGraphData {
+  weekData: WeekDataPoint[];
+  monthlyData: MonthlyDataPoint[];
+  timeDistribution: { name: string; value: number; }[];
 }
 
 // Definindo a cor preta pastel
@@ -74,23 +64,39 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const { calculateDashboardStats, calculateGraphData, records } = useTimeRecords(currentUser?.uid || '');
   const { schedule } = useWorkSchedule();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     todayTotal: '0h',
     weekTotal: '0h',
     hoursBalance: '0h'
   });
-  const [graphData, setGraphData] = useState<GraphData>({
+  const [graphData, setGraphData] = useState<DashboardGraphData>({
     weekData: [],
-    timeDistribution: [],
-    monthlyData: []
+    monthlyData: [],
+    timeDistribution: [
+      { name: 'Manhã', value: 0 },
+      { name: 'Tarde', value: 0 },
+      { name: 'Extra', value: 0 }
+    ]
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      const statsResult = await calculateDashboardStats();
+    const fetchData = () => {
+      const statsResult = calculateDashboardStats();
       const graphResult = calculateGraphData();
       setStats(statsResult);
-      setGraphData(graphResult as GraphData);
+      
+      // Converter o resultado para o formato esperado
+      const convertedGraphData: DashboardGraphData = {
+        weekData: graphResult.weekData,
+        monthlyData: graphResult.monthlyData,
+        timeDistribution: [
+          { name: 'Manhã', value: graphResult.timeDistribution.morning },
+          { name: 'Tarde', value: graphResult.timeDistribution.afternoon },
+          { name: 'Extra', value: graphResult.timeDistribution.overtime }
+        ]
+      };
+      
+      setGraphData(convertedGraphData);
     };
     fetchData();
   }, [calculateDashboardStats, calculateGraphData]);

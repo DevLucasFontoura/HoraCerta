@@ -344,6 +344,7 @@ const Analytics = () => {
       userId: currentUser?.uid || '',
       type: 'regular',
       hours: 8,
+      balance: 0,
       description: 'Registro de teste',
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()

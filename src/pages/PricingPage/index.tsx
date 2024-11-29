@@ -190,14 +190,75 @@ const PricingGrid = styled.div`
   padding: 0 5%;
 `;
 
-// Reutilize os componentes de estilo existentes do LandingPage
+const PlanFeatures = styled.ul`
+  list-style: none;
+  margin-bottom: 2rem;
+`;
+
+const PrimaryButton = styled(Link)`
+  display: inline-block;
+  padding: 0.875rem 1.5rem;
+  background-color: #111111;
+  color: white;
+  text-decoration: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+  border: none;
+  margin-top: auto;
+
+  &:hover {
+    background-color: #000000;
+    transform: translateY(-1px);
+  }
+`;
+
+const SecondaryButton = styled.a`
+  display: inline-block;
+  padding: 0.875rem 1.5rem;
+  background-color: #ffffff;
+  color: #111111;
+  text-decoration: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 1px solid #eaeaea;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+  margin-top: auto;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+`;
+
 const PricingCard = styled.div<{ highlighted?: boolean }>`
+  display: flex;
+  flex-direction: column;
   padding: 2rem;
   border-radius: 12px;
   background-color: ${props => props.highlighted ? '#f8f9ff' : '#ffffff'};
   border: 1px solid ${props => props.highlighted ? '#e1e5ff' : '#eaeaea'};
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   position: relative;
+  min-height: 500px;
+
+  /* Adiciona espaço flexível entre o conteúdo e o botão */
+  ${PlanFeatures} {
+    margin-bottom: auto;
+  }
+
+  /* Centraliza o botão na parte inferior */
+  ${PrimaryButton}, ${SecondaryButton} {
+    margin-top: 2rem;
+    width: 80%; /* Reduz a largura do botão */
+    margin-left: auto;
+    margin-right: auto;
+  }
 `;
 
 const PlanName = styled.h3`
@@ -218,11 +279,6 @@ const PlanPrice = styled.div`
   }
 `;
 
-const PlanFeatures = styled.ul`
-  list-style: none;
-  margin-bottom: 2rem;
-`;
-
 const PlanFeature = styled.li`
   display: flex;
   align-items: center;
@@ -236,44 +292,6 @@ const PlanFeature = styled.li`
     &:first-child {
       flex-shrink: 0;
     }
-  }
-`;
-
-const PrimaryButton = styled(Link)`
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: #111111;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  width: 100%;
-  text-align: center;
-
-  &:hover {
-    background-color: #000000;
-    transform: translateY(-1px);
-  }
-`;
-
-const SecondaryButton = styled.a`
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: #ffffff;
-  color: #111111;
-  text-decoration: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  border: 1px solid #eaeaea;
-  transition: all 0.2s ease;
-  width: 100%;
-  text-align: center;
-
-  &:hover {
-    background-color: #f5f5f5;
   }
 `;
 

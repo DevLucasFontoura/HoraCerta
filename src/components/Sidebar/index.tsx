@@ -11,80 +11,37 @@ import {
   AiOutlineSetting,
   AiOutlineLogout,
   AiOutlineMenu,
-  AiOutlineClose
+  AiOutlineClose,
+  AiOutlineClockCircle
 } from 'react-icons/ai';
 
-const Sidebar = () => {
-  const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
+interface NavItemComponentProps {
+  to: string;
+  active: boolean;
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}
 
-  console.log('Firebase auth:', auth);
-  console.log('Firebase auth currentUser:', auth.currentUser);
+const NavItem = styled(Link)<{ active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  color: ${props => props.active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.TEXT.SECONDARY};
+  background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
-  // Teste do auth
-  console.log('Auth inicializado:', auth);
+  &:hover {
+    background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}15` : `${APP_CONFIG.COLORS.TEXT.SECONDARY}10`};
+  }
 
-  // Log inicial para verificar se o componente está recebendo o contexto
-  console.log('Estado atual do usuário:', currentUser);
-
-  // Adiciona a função toggleSidebar
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/login');
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    }
-  };
-
-  const menuItems = [
-    { path: '/', icon: <AiOutlineHome size={24} />, label: 'Início' },
-    { path: '/analytics', icon: <AiOutlineBarChart size={24} />, label: 'Relatórios' },
-    { path: '/settings', icon: <AiOutlineSetting size={24} />, label: 'Configurações' }
-  ];
-
-  return (
-    <>
-      <MenuButton onClick={toggleSidebar}>
-        {isOpen ? <AiOutlineClose size={24} /> : <AiOutlineMenu size={24} />}
-      </MenuButton>
-
-      <SidebarContainer isOpen={isOpen}>
-        <Logo>
-          <img src="/logo.svg" alt="Logo" />
-          <span>Ponto Digital</span>
-        </Logo>
-
-        <Nav>
-          {menuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              to={item.path}
-              active={location.pathname === item.path}
-              onClick={() => setIsOpen(false)}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </NavItem>
-          ))}
-        </Nav>
-
-        <LogoutButton onClick={handleLogout}>
-          <AiOutlineLogout size={24} />
-          <span>Sair</span>
-        </LogoutButton>
-      </SidebarContainer>
-
-      {isOpen && <Overlay onClick={toggleSidebar} />}
-    </>
-  );
-};
+  span {
+    font-size: 0.875rem;
+    font-weight: ${props => props.active ? '500' : '400'};
+  }
+`;
 
 const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   position: fixed;
@@ -94,14 +51,14 @@ const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   width: 240px;
   background: white;
   padding: 1rem;
+  border-right: 1px solid #eaeaea;
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
 
   @media (max-width: 768px) {
     transform: translateX(${props => props.isOpen ? '0' : '-100%'});
-    transition: transform 0.3s ease;
   }
 `;
 
@@ -129,27 +86,6 @@ const Nav = styled.nav`
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
-`;
-
-const NavItem = styled(Link)<{ active: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  text-decoration: none;
-  color: ${props => props.active ? APP_CONFIG.COLORS.PRIMARY : APP_CONFIG.COLORS.TEXT.SECONDARY};
-  background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}10` : 'transparent'};
-  border-radius: 8px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${props => props.active ? `${APP_CONFIG.COLORS.PRIMARY}15` : `${APP_CONFIG.COLORS.TEXT.SECONDARY}10`};
-  }
-
-  span {
-    font-size: 0.875rem;
-    font-weight: ${props => props.active ? '500' : '400'};
-  }
 `;
 
 const LogoutButton = styled.button`
@@ -215,5 +151,66 @@ const Overlay = styled.div`
     display: block;
   }
 `;
+
+const Sidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  console.log('Sidebar - location:', location.pathname);
+
+  const menuItems = [
+    { path: '/home', icon: <AiOutlineHome size={24} />, label: 'Início' },
+    { path: '/dashboard', icon: <AiOutlineBarChart size={24} />, label: 'Dashboard' },
+    { path: '/registrarPonto', icon: <AiOutlineClockCircle size={24} />, label: 'Registrar Ponto' },
+    { path: '/analytics', icon: <AiOutlineBarChart size={24} />, label: 'Relatórios' },
+    { path: '/settings', icon: <AiOutlineSetting size={24} />, label: 'Configurações' }
+  ];
+
+  const handleNavigation = (path: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log('Clicou em:', path);
+    
+    try {
+      navigate(path);
+      console.log('Navegação realizada para:', path);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Erro na navegação:', error);
+    }
+  };
+
+  return (
+    <>
+      <SidebarContainer isOpen={isOpen}>
+        <Logo>
+          <AiOutlineClockCircle size={24} />
+          <span>HoraCerta</span>
+        </Logo>
+
+        <Nav>
+          {menuItems.map((item) => (
+            <NavItem
+              key={item.path}
+              to={item.path}
+              active={location.pathname === item.path}
+              onClick={(e) => handleNavigation(item.path, e)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </NavItem>
+          ))}
+        </Nav>
+
+        <LogoutButton onClick={() => {/* lógica de logout */}}>
+          <AiOutlineLogout size={24} />
+          <span>Sair</span>
+        </LogoutButton>
+      </SidebarContainer>
+
+      {isOpen && <Overlay onClick={() => setIsOpen(false)} />}
+    </>
+  );
+};
 
 export default Sidebar;

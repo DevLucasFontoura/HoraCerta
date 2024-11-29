@@ -1,12 +1,29 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface PrivateRouteProps {
-  children: React.ReactNode;
-}
+export const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  const { currentUser, loading } = useAuth();
+  const location = useLocation();
 
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { currentUser } = useAuth();
-  
-  return currentUser ? <>{children}</> : <Navigate to="/login" />;
+  console.log('PrivateRoute - currentUser:', currentUser?.uid);
+  console.log('PrivateRoute - loading:', loading);
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        Carregando...
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
 };

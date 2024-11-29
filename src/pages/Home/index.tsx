@@ -17,17 +17,7 @@ import { useTimeRecords } from '../../hooks/useTimeRecords';
 import { useWorkSchedule } from '../../hooks/useWorkSchedule';
 import { useAuth } from '../../contexts/AuthContext';
 import * as XLSX from 'xlsx';
-
-interface TimeRecord {
-  id: string;
-  date: string;
-  entry?: string;
-  lunchOut?: string;
-  lunchReturn?: string;
-  exit?: string;
-  total?: string;
-  balance?: string;
-}
+import { TimeRecord, TimeRecordExcel, DashboardStats } from '../../types';
 
 interface DashboardCard {
   id: string;
@@ -62,32 +52,36 @@ const tableVariants = {
 
 const Home = () => {
   const { currentUser } = useAuth();
-  const { records, calculateDashboardStats } = useTimeRecords(currentUser?.uid || '');
+  const { records, calculateDashboardStats, loading } = useTimeRecords(currentUser?.uid || '');
   const { schedule } = useWorkSchedule();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats & { lastUpdate: string }>({
     todayTotal: '0h',
     weekTotal: '0h',
     hoursBalance: '0h',
-    lastUpdate: ''
+    lastUpdate: new Date().toLocaleTimeString()
   });
   const [showExportModal, setShowExportModal] = useState(false);
 
   const firstName = currentUser?.displayName?.split(' ')[0] || 'usuário';
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const result = await calculateDashboardStats();
+  const memoizedCalculateStats = useMemo(() => {
+    return () => {
+      const result = calculateDashboardStats();
       const currentTime = new Date().toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit'
       });
-      setStats({
+      return {
         ...result,
         lastUpdate: currentTime
-      });
+      };
     };
-    fetchStats();
   }, [calculateDashboardStats]);
+
+  useEffect(() => {
+    const result = memoizedCalculateStats();
+    setStats(result);
+  }, [memoizedCalculateStats, records]);
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
@@ -204,30 +198,20 @@ const Home = () => {
     return `${totalBalance >= 0 ? '+' : '-'}${hours}h ${minutes}min`;
   };
 
-  const generateWorksheet = (records: TimeRecord[], monthTitle: string) => {
-    const data = records.map(record => ({
-      'Data': formatDate(record.date),
-      'Entrada': record.entry || '-',
-      'Saída Almoço': record.lunchOut || '-',
-      'Retorno': record.lunchReturn || '-',
-      'Saída': record.exit || '-',
-      'Total': record.total || '-',
-      'Saldo': record.total ? calculateDailyBalance({ total: record.total }, schedule.expectedDailyHours) : '-',
+  const generateWorksheet = (records: TimeRecord[], sheetName: string) => {
+    const data: TimeRecordExcel[] = records.map(record => ({
+      Data: record.displayDate,
+      Entrada: record.entry || '',
+      'Saída Almoço': record.lunchOut || '',
+      'Retorno Almoço': record.lunchReturn || '',
+      Saída: record.exit || '',
+      'Total Horas': record.hours.toString(),
+      'Saldo': record.balance.toString(),
+      Descrição: record.description || ''
     }));
 
-    // Adiciona o banco de horas do mês
-    const monthlyBalance = calculateMonthlyBalance(records, schedule.expectedDailyHours);
-    data.push({
-      'Data': 'Banco de Horas do Mês',
-      'Entrada': '',
-      'Saída Almoço': '',
-      'Retorno': '',
-      'Saída': '',
-      'Total': '',
-      'Saldo': monthlyBalance,
-    });
-
-    return XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet(data);
+    return ws;
   };
 
   const exportAllMonths = () => {

@@ -1,32 +1,73 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { registerTimeEntry, subscribeToTodayEntries } from '../services/timesheet';
+import { registerTimeEntry } from '../services/timesheet';
+import styled from 'styled-components';
 
-export function TimeRegister() {
+type TimeEntryType = 'entry' | 'exit' | 'lunch_exit' | 'lunch_return';
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Button = styled.button`
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #10B981;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 150px;
+
+  &:hover {
+    background-color: #059669;
+  }
+
+  &:disabled {
+    background-color: #9CA3AF;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #DC2626;
+  background-color: #FEE2E2;
+  padding: 0.75rem;
+  border-radius: 4px;
+  text-align: center;
+  margin-top: 1rem;
+`;
+
+const TimeRegister = () => {
   const { currentUser } = useAuth();
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    console.log('TimeRegister - currentUser:', currentUser?.uid);
-    
-    if (!currentUser) return;
+  const handleRegister = async (type: TimeEntryType) => {
+    if (!currentUser) {
+      setError('Usuário não autenticado');
+      return;
+    }
 
-    console.log('Configurando subscription...');
-    
-    const unsubscribe = subscribeToTodayEntries(currentUser.uid, (newEntries) => {
-      console.log('Novos registros recebidos:', newEntries);
-      setEntries(newEntries);
-    });
-
-    return () => {
-      console.log('Limpando subscription...');
-      unsubscribe();
-    };
-  }, [currentUser]);
-
-  const handleRegister = async (type: 'entry' | 'lunch_exit' | 'lunch_return' | 'exit') => {
     try {
       setLoading(true);
       setError('');
@@ -39,42 +80,37 @@ export function TimeRegister() {
     }
   };
 
-  const getNextAction = () => {
-    const types = entries.map(e => e.type);
-    if (types.length === 0) return 'entry';
-    if (types.length === 1) return 'lunch_exit';
-    if (types.length === 2) return 'lunch_return';
-    if (types.length === 3) return 'exit';
-    return null;
-  };
-
-  const nextAction = getNextAction();
-
   return (
-    <div>
-      {error && <div className="error">{error}</div>}
-      
-      <div>
-        <h3>Registros de Hoje ({entries.length})</h3>
-        {entries.map(entry => (
-          <div key={entry.id}>
-            {entry.type}: {entry.timestamp?.toLocaleTimeString()}
-          </div>
-        ))}
-      </div>
-
-      {nextAction && (
-        <button 
-          onClick={() => handleRegister(nextAction)}
+    <Container>
+      <ButtonGroup>
+        <Button 
+          onClick={() => handleRegister('entry')} 
           disabled={loading}
         >
-          {loading ? 'Registrando...' : `Registrar ${nextAction}`}
-        </button>
-      )}
-
-      <pre style={{ fontSize: '12px', marginTop: '20px' }}>
-        Debug: {JSON.stringify({ entries, loading, error }, null, 2)}
-      </pre>
-    </div>
+          Entrada
+        </Button>
+        <Button 
+          onClick={() => handleRegister('lunch_exit')} 
+          disabled={loading}
+        >
+          Saída Almoço
+        </Button>
+        <Button 
+          onClick={() => handleRegister('lunch_return')} 
+          disabled={loading}
+        >
+          Retorno Almoço
+        </Button>
+        <Button 
+          onClick={() => handleRegister('exit')} 
+          disabled={loading}
+        >
+          Saída
+        </Button>
+      </ButtonGroup>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+    </Container>
   );
-} 
+};
+
+export default TimeRegister; 
