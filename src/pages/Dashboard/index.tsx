@@ -98,7 +98,7 @@ const Dashboard = () => {
       
       setGraphData(convertedGraphData);
     };
-    fetchData();
+    // fetchData();
   }, [calculateDashboardStats, calculateGraphData]);
 
   const dashboardStats = [
